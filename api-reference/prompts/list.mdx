@@ -1,0 +1,110 @@
+---
+title: List Prompts
+api: GET /api/v1/prompts
+description: Get all prompts for the authenticated user
+---
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+## Response
+
+<ResponseField name="prompts" type="array">
+  Array of prompt objects
+  <Expandable title="Prompt object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the prompt
+    </ResponseField>
+    <ResponseField name="slug" type="string">
+      URL-friendly identifier
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Display name of the prompt
+    </ResponseField>
+    <ResponseField name="description" type="string | null">
+      Description of the prompt
+    </ResponseField>
+    <ResponseField name="provider" type="string | null">
+      Model provider: `OPENAI`, `ANTHROPIC`, or `GOOGLE`
+    </ResponseField>
+    <ResponseField name="model" type="string | null">
+      Default model for this prompt
+    </ResponseField>
+    <ResponseField name="temperature" type="number | null">
+      Temperature setting for the model (0-2)
+    </ResponseField>
+    <ResponseField name="maxOutputTokens" type="number | null">
+      Maximum output tokens limit
+    </ResponseField>
+    <ResponseField name="currentVersion" type="number">
+      Current version number
+    </ResponseField>
+    <ResponseField name="variables" type="string[]">
+      List of template variables used in the prompt
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp of creation
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      ISO 8601 timestamp of last update
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET https://app.tracia.io/api/v1/prompts \
+  -H "Authorization: Bearer tr_your_api_key"
+```
+
+```typescript SDK
+const { prompts } = await tracia.prompts.list();
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "prompts": [
+    {
+      "id": "clx1abc123",
+      "slug": "welcome-email",
+      "name": "Welcome Email",
+      "description": "A welcome email template",
+      "provider": "OPENAI",
+      "model": "gpt-4",
+      "temperature": 0.7,
+      "maxOutputTokens": null,
+      "currentVersion": 3,
+      "variables": ["name", "product"],
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "updatedAt": "2024-01-20T14:22:00.000Z"
+    },
+    {
+      "id": "clx2def456",
+      "slug": "support-reply",
+      "name": "Support Reply",
+      "description": null,
+      "provider": "OPENAI",
+      "model": "gpt-3.5-turbo",
+      "temperature": null,
+      "maxOutputTokens": null,
+      "currentVersion": 1,
+      "variables": ["customerName", "issue"],
+      "createdAt": "2024-01-18T09:15:00.000Z",
+      "updatedAt": "2024-01-18T09:15:00.000Z"
+    }
+  ]
+}
+```
+
+```json 401
+{
+  "code": "UNAUTHORIZED",
+  "message": "Invalid or missing API key"
+}
+```
+</ResponseExample>

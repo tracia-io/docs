@@ -1,0 +1,104 @@
+---
+title: Overview
+description: SDK reference for prompt operations
+---
+
+All prompt operations are available under the `tracia.prompts` namespace.
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+// Run a prompt
+const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
+
+// List all prompts
+const { prompts } = await tracia.prompts.list();
+
+// Get a single prompt
+const prompt = await tracia.prompts.get('welcome-email');
+
+// Create a prompt
+const newPrompt = await tracia.prompts.create({ name: 'My Prompt', content: [...] });
+
+// Update a prompt
+const updated = await tracia.prompts.update('welcome-email', { name: 'New Name' });
+
+// Delete a prompt
+await tracia.prompts.delete('welcome-email');
+```
+
+## Available Methods
+
+<CardGroup cols={2}>
+  <Card title="Run" icon="play" href="/sdk-node/prompts/run">
+    Execute a prompt and get the LLM response
+  </Card>
+  <Card title="List" icon="list" href="/sdk-node/prompts/list">
+    Get all prompts for your account
+  </Card>
+  <Card title="Get" icon="eye" href="/sdk-node/prompts/get">
+    Retrieve a single prompt with its content
+  </Card>
+  <Card title="Create" icon="plus" href="/sdk-node/prompts/create">
+    Create a new prompt
+  </Card>
+  <Card title="Update" icon="pen" href="/sdk-node/prompts/update">
+    Update an existing prompt
+  </Card>
+  <Card title="Delete" icon="trash" href="/sdk-node/prompts/delete">
+    Delete a prompt and all its versions
+  </Card>
+</CardGroup>
+
+## Types
+
+### Prompt
+
+```typescript
+interface Prompt {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  provider: 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | null;
+  model: string | null;
+  temperature: number | null;
+  maxOutputTokens: number | null;
+  currentVersion: number;
+  content: PromptMessage[];
+  variables: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### PromptMessage
+
+```typescript
+interface PromptMessage {
+  id: string;
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+```
+
+### PromptListItem
+
+```typescript
+interface PromptListItem {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  provider: 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | null;
+  model: string | null;
+  temperature: number | null;
+  maxOutputTokens: number | null;
+  currentVersion: number;
+  variables: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+```

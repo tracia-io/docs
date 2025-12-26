@@ -1,0 +1,106 @@
+---
+title: API Reference
+description: REST API documentation for Tracia
+---
+
+The Tracia API is a RESTful API that allows you to manage prompts and run them programmatically.
+
+## Base URL
+
+```
+https://app.tracia.io/api/v1
+```
+
+## Authentication
+
+All API requests require authentication using a Bearer token. Include your API key in the `Authorization` header:
+
+```bash
+Authorization: Bearer tr_your_api_key
+```
+
+### Getting an API Key
+
+1. Log in to [tracia.io](https://tracia.io)
+2. Navigate to **Settings** > **API Keys**
+3. Click **Create API Key**
+4. Copy your key (starts with `tr_`)
+
+<Warning>
+  Keep your API key secure. It provides full access to your Tracia account.
+</Warning>
+
+## Request Format
+
+All request bodies should be JSON with the `Content-Type: application/json` header.
+
+```bash
+curl -X POST https://app.tracia.io/api/v1/prompts \
+  -H "Authorization: Bearer tr_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My Prompt", "content": [...]}'
+```
+
+## Response Format
+
+All responses are JSON. Successful responses return the requested data:
+
+```json
+{
+  "id": "abc123",
+  "slug": "my-prompt",
+  "name": "My Prompt",
+  ...
+}
+```
+
+## Error Responses
+
+Error responses include a `code` and `message`:
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "Prompt not found: my-prompt"
+}
+```
+
+### Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `UNAUTHORIZED` | 401 | Invalid or missing API key |
+| `NOT_FOUND` | 404 | Resource not found |
+| `CONFLICT` | 409 | Resource already exists |
+| `INVALID_REQUEST` | 400 | Invalid request format |
+| `MISSING_VARIABLES` | 400 | Missing required template variables |
+| `MISSING_PROVIDER_KEY` | 400 | No LLM provider key configured |
+| `PROVIDER_ERROR` | 500 | Error from the LLM provider |
+
+## Endpoints
+
+### Prompts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/prompts` | [List all prompts](/api-reference/prompts/list) |
+| `GET` | `/prompts/:slug` | [Get a prompt](/api-reference/prompts/get) |
+| `POST` | `/prompts` | [Create a prompt](/api-reference/prompts/create) |
+| `PUT` | `/prompts/:slug` | [Update a prompt](/api-reference/prompts/update) |
+| `DELETE` | `/prompts/:slug` | [Delete a prompt](/api-reference/prompts/delete) |
+| `POST` | `/prompts/:slug/run` | [Run a prompt](/api-reference/prompts/run) |
+
+## Rate Limits
+
+The API has rate limits to ensure fair usage. If you exceed the rate limit, you'll receive a `429 Too Many Requests` response.
+
+## SDK
+
+We recommend using the official [TypeScript SDK](/sdk-node/installation) for easier integration:
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
+```

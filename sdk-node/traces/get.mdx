@@ -1,0 +1,131 @@
+---
+title: Get Trace
+description: Retrieve full details of a single trace
+---
+
+```typescript
+const trace = await tracia.traces.get(traceId);
+```
+
+Retrieve a single trace by its ID, including full input/output details.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `traceId` | `string` | Yes | The trace ID (e.g., `tr_abc123def456`) |
+
+## Response
+
+```typescript
+interface Trace {
+  id: string;
+  traceId: string;
+  promptSlug: string;
+  promptVersion: number;
+  model: string;
+  provider: string;
+  input: { messages: PromptMessage[] };
+  variables: Record<string, string> | null;
+  output: string | null;
+  status: 'SUCCESS' | 'ERROR';
+  error: string | null;
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cost: number | null;
+  tags: string[];
+  userId: string | null;
+  sessionId: string | null;
+  createdAt: string;
+}
+```
+
+## Examples
+
+### Basic Usage
+
+```typescript
+const trace = await tracia.traces.get('tr_abc123def456');
+
+console.log(`Prompt: ${trace.promptSlug} v${trace.promptVersion}`);
+console.log(`Status: ${trace.status}`);
+console.log(`Latency: ${trace.latencyMs}ms`);
+```
+
+### Viewing Input and Output
+
+```typescript
+const trace = await tracia.traces.get('tr_abc123def456');
+
+console.log('Input messages:');
+trace.input.messages.forEach(msg => {
+  console.log(`  [${msg.role}]: ${msg.content.slice(0, 100)}...`);
+});
+
+console.log('\nOutput:');
+console.log(trace.output);
+```
+
+### Checking Variables Used
+
+```typescript
+const trace = await tracia.traces.get('tr_abc123def456');
+
+if (trace.variables) {
+  console.log('Variables used:');
+  Object.entries(trace.variables).forEach(([key, value]) => {
+    console.log(`  ${key}: ${value}`);
+  });
+}
+```
+
+### Handling Errors
+
+```typescript
+const trace = await tracia.traces.get('tr_abc123def456');
+
+if (trace.status === 'ERROR') {
+  console.error(`Trace failed: ${trace.error}`);
+} else {
+  console.log('Trace succeeded');
+  console.log(`Tokens: ${trace.inputTokens} in, ${trace.outputTokens} out`);
+  console.log(`Cost: $${trace.cost?.toFixed(4) || 'N/A'}`);
+}
+```
+
+### Debugging a Prompt Run
+
+```typescript
+const trace = await tracia.traces.get('tr_abc123def456');
+
+console.log('=== Trace Debug Info ===');
+console.log(`Trace ID: ${trace.traceId}`);
+console.log(`Prompt: ${trace.promptSlug} v${trace.promptVersion}`);
+console.log(`Model: ${trace.model} (${trace.provider})`);
+console.log(`Status: ${trace.status}`);
+console.log(`Latency: ${trace.latencyMs}ms`);
+console.log(`Tokens: ${trace.inputTokens} + ${trace.outputTokens} = ${trace.totalTokens}`);
+console.log(`Cost: $${trace.cost?.toFixed(4) || 'N/A'}`);
+console.log(`Tags: ${trace.tags.join(', ') || 'none'}`);
+console.log(`User ID: ${trace.userId || 'N/A'}`);
+console.log(`Session ID: ${trace.sessionId || 'N/A'}`);
+console.log(`Created: ${trace.createdAt}`);
+```
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const trace = await tracia.traces.get('tr_abc123def456');
+} catch (error) {
+  if (error instanceof TraciaError) {
+    if (error.code === TraciaErrorCode.NOT_FOUND) {
+      console.error('Trace does not exist');
+    }
+  }
+}
+```

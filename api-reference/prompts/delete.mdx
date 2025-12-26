@@ -1,0 +1,51 @@
+---
+title: Delete Prompt
+api: DELETE /api/v1/prompts/{slug}
+description: Delete a prompt and all its versions
+---
+
+<Warning>
+  This action is irreversible. All versions of the prompt will be permanently deleted.
+</Warning>
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  The prompt slug to delete
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  `true` if the prompt was successfully deleted
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X DELETE https://app.tracia.io/api/v1/prompts/welcome-email \
+  -H "Authorization: Bearer tr_your_api_key"
+```
+
+```typescript SDK
+await tracia.prompts.delete('welcome-email');
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "success": true
+}
+```
+
+```json 404
+{
+  "code": "NOT_FOUND",
+  "message": "Prompt not found: welcome-email"
+}
+```
+</ResponseExample>

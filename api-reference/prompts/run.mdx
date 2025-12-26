@@ -1,0 +1,145 @@
+---
+title: Run Prompt
+api: POST /api/v1/prompts/{slug}/run
+description: Execute a prompt and get the LLM response
+---
+
+Run a prompt with variable substitution and get the generated response. This endpoint handles template rendering, LLM API calls, and automatically logs a trace.
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  The prompt slug to run
+</ParamField>
+
+<ParamField body="variables" type="object">
+  Key-value pairs for template variables. Must include all variables required by the prompt.
+</ParamField>
+
+<ParamField body="model" type="string">
+  Override the default model (e.g., `gpt-4`, `claude-3-opus-20240229`)
+</ParamField>
+
+<ParamField body="tags" type="string[]">
+  Tags for filtering traces in the dashboard
+</ParamField>
+
+<ParamField body="userId" type="string">
+  End user identifier for tracking
+</ParamField>
+
+<ParamField body="sessionId" type="string">
+  Session identifier for grouping related traces
+</ParamField>
+
+## Response
+
+<ResponseField name="text" type="string">
+  The generated text from the LLM
+</ResponseField>
+
+<ResponseField name="traceId" type="string">
+  Unique identifier for this trace (use to look up in dashboard)
+</ResponseField>
+
+<ResponseField name="promptVersion" type="number">
+  Version of the prompt that was used
+</ResponseField>
+
+<ResponseField name="latencyMs" type="number">
+  Total request latency in milliseconds
+</ResponseField>
+
+<ResponseField name="usage" type="object">
+  Token usage statistics
+  <Expandable title="Usage object">
+    <ResponseField name="inputTokens" type="number">
+      Number of input tokens
+    </ResponseField>
+    <ResponseField name="outputTokens" type="number">
+      Number of output tokens
+    </ResponseField>
+    <ResponseField name="totalTokens" type="number">
+      Total tokens used
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="cost" type="number">
+  Estimated cost in USD
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://app.tracia.io/api/v1/prompts/welcome-email/run \
+  -H "Authorization: Bearer tr_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "variables": {
+      "name": "Alice",
+      "product": "Tracia"
+    },
+    "tags": ["onboarding", "email"],
+    "userId": "user_123"
+  }'
+```
+
+```typescript SDK
+const result = await tracia.prompts.run('welcome-email', {
+  name: 'Alice',
+  product: 'Tracia'
+}, {
+  tags: ['onboarding', 'email'],
+  userId: 'user_123'
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "text": "Dear Alice,\n\nWelcome to Tracia! We're thrilled to have you join our community...",
+  "traceId": "tr_abc123xyz",
+  "promptVersion": 3,
+  "latencyMs": 1250,
+  "usage": {
+    "inputTokens": 45,
+    "outputTokens": 120,
+    "totalTokens": 165
+  },
+  "cost": 0.0049
+}
+```
+
+```json 400 Missing Variables
+{
+  "code": "MISSING_VARIABLES",
+  "message": "Missing required variables: product"
+}
+```
+
+```json 400 No Provider Key
+{
+  "code": "MISSING_PROVIDER_KEY",
+  "message": "No OpenAI API key configured. Add one in Settings > Providers."
+}
+```
+
+```json 404
+{
+  "code": "NOT_FOUND",
+  "message": "Prompt not found: welcome-email"
+}
+```
+
+```json 500 Provider Error
+{
+  "code": "PROVIDER_ERROR",
+  "message": "OpenAI error: Rate limit exceeded"
+}
+```
+</ResponseExample>

@@ -1,0 +1,104 @@
+---
+title: Update Prompt
+api: PUT /api/v1/prompts/{slug}
+description: Update an existing prompt
+---
+
+Update a prompt's metadata or content. If the content changes, a new version is automatically created.
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  The prompt slug to update
+</ParamField>
+
+<ParamField body="name" type="string">
+  New display name
+</ParamField>
+
+<ParamField body="slug" type="string">
+  New URL-friendly identifier
+</ParamField>
+
+<ParamField body="description" type="string">
+  New description (set to empty string to clear)
+</ParamField>
+
+<ParamField body="content" type="array">
+  New array of prompt messages. If different from current content, creates a new version.
+</ParamField>
+
+## Response
+
+Returns the updated prompt object with the new version number if content changed.
+
+<RequestExample>
+```bash cURL
+curl -X PUT https://app.tracia.io/api/v1/prompts/welcome-email \
+  -H "Authorization: Bearer tr_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Welcome Email",
+    "content": [
+      {
+        "id": "msg_1",
+        "role": "user",
+        "content": "Write a friendly welcome email for {{name}} at {{company}}."
+      }
+    ]
+  }'
+```
+
+```typescript SDK
+const prompt = await tracia.prompts.update('welcome-email', {
+  name: 'Updated Welcome Email',
+  content: [
+    { id: 'msg_1', role: 'user', content: 'Write a friendly welcome email for {{name}} at {{company}}.' },
+  ],
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "clx1abc123",
+  "slug": "welcome-email",
+  "name": "Updated Welcome Email",
+  "description": "A welcome email template",
+  "provider": "OPENAI",
+  "model": "gpt-4",
+  "temperature": 0.7,
+  "maxOutputTokens": null,
+  "currentVersion": 4,
+  "content": [
+    {
+      "id": "msg_1",
+      "role": "user",
+      "content": "Write a friendly welcome email for {{name}} at {{company}}."
+    }
+  ],
+  "variables": ["name", "company"],
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "updatedAt": "2024-01-22T08:45:00.000Z"
+}
+```
+
+```json 404
+{
+  "code": "NOT_FOUND",
+  "message": "Prompt not found: welcome-email"
+}
+```
+
+```json 409
+{
+  "code": "CONFLICT",
+  "message": "A prompt with this slug already exists"
+}
+```
+</ResponseExample>

@@ -1,0 +1,129 @@
+---
+title: Get Prompt
+api: GET /api/v1/prompts/{slug}
+description: Get a single prompt with its content
+---
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  The prompt slug
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique identifier for the prompt
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-friendly identifier
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Display name of the prompt
+</ResponseField>
+
+<ResponseField name="description" type="string | null">
+  Description of the prompt
+</ResponseField>
+
+<ResponseField name="provider" type="string | null">
+  Model provider: `OPENAI`, `ANTHROPIC`, or `GOOGLE`
+</ResponseField>
+
+<ResponseField name="model" type="string | null">
+  Default model for this prompt
+</ResponseField>
+
+<ResponseField name="temperature" type="number | null">
+  Temperature setting for the model (0-2)
+</ResponseField>
+
+<ResponseField name="maxOutputTokens" type="number | null">
+  Maximum output tokens limit
+</ResponseField>
+
+<ResponseField name="currentVersion" type="number">
+  Current version number
+</ResponseField>
+
+<ResponseField name="content" type="array">
+  Array of prompt messages
+  <Expandable title="Message object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the message
+    </ResponseField>
+    <ResponseField name="role" type="string">
+      Message role: `system`, `user`, or `assistant`
+    </ResponseField>
+    <ResponseField name="content" type="string">
+      Message content (may include `{{variables}}`)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="variables" type="string[]">
+  List of template variables extracted from content
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of creation
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET https://app.tracia.io/api/v1/prompts/welcome-email \
+  -H "Authorization: Bearer tr_your_api_key"
+```
+
+```typescript SDK
+const prompt = await tracia.prompts.get('welcome-email');
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "clx1abc123",
+  "slug": "welcome-email",
+  "name": "Welcome Email",
+  "description": "A welcome email template",
+  "provider": "OPENAI",
+  "model": "gpt-4",
+  "temperature": 0.7,
+  "maxOutputTokens": null,
+  "currentVersion": 3,
+  "content": [
+    {
+      "id": "msg_1",
+      "role": "system",
+      "content": "You are a helpful assistant that writes professional emails."
+    },
+    {
+      "id": "msg_2",
+      "role": "user",
+      "content": "Write a welcome email for {{name}} who just signed up for {{product}}."
+    }
+  ],
+  "variables": ["name", "product"],
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "updatedAt": "2024-01-20T14:22:00.000Z"
+}
+```
+
+```json 404
+{
+  "code": "NOT_FOUND",
+  "message": "Prompt not found: welcome-email"
+}
+```
+</ResponseExample>

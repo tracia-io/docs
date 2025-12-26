@@ -1,0 +1,121 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Tracia",
+  "colors": {
+    "primary": "#3ecf8e",
+    "light": "#4ade80",
+    "dark": "#2c7a5e"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Node.js SDK",
+            "pages": [
+              "sdk-node/installation",
+              {
+                "group": "Prompts",
+                "pages": [
+                  "sdk-node/prompts",
+                  "sdk-node/prompts/run",
+                  "sdk-node/prompts/list",
+                  "sdk-node/prompts/get",
+                  "sdk-node/prompts/create",
+                  "sdk-node/prompts/update",
+                  "sdk-node/prompts/delete"
+                ]
+              },
+              {
+                "group": "Traces",
+                "pages": [
+                  "sdk-node/traces",
+                  "sdk-node/traces/list",
+                  "sdk-node/traces/get"
+                ]
+              },
+              "sdk-node/error-handling"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Prompts",
+            "pages": [
+              "api-reference/prompts/list",
+              "api-reference/prompts/get",
+              "api-reference/prompts/create",
+              "api-reference/prompts/update",
+              "api-reference/prompts/delete",
+              "api-reference/prompts/run"
+            ]
+          },
+          {
+            "group": "Traces",
+            "pages": [
+              "api-reference/traces/list",
+              "api-reference/traces/get"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/tracia-io",
+          "icon": "github"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Sign in",
+        "href": "https://app.tracia.io/login/"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.tracia.io"
+    }
+  },
+  "api": {
+    "baseUrl": "https://app.tracia.io",
+    "auth": {
+      "method": "bearer",
+      "name": "Authorization"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/tracia-io"
+    }
+  }
+}

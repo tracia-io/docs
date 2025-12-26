@@ -1,0 +1,153 @@
+---
+title: Error Handling
+description: Handle errors gracefully in your application
+---
+
+All API errors throw `TraciaError` with a specific error code.
+
+## Basic Error Handling
+
+```typescript
+import { Tracia, TraciaError, TraciaErrorCode } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+try {
+  const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
+  console.log(result.text);
+} catch (error) {
+  if (error instanceof TraciaError) {
+    console.error(`Error [${error.code}]: ${error.message}`);
+  }
+}
+```
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `UNAUTHORIZED` | Invalid or missing API key |
+| `NOT_FOUND` | The requested resource (prompt, etc.) does not exist |
+| `CONFLICT` | Resource already exists (e.g., duplicate slug) |
+| `MISSING_VARIABLES` | Required template variables are missing |
+| `MISSING_PROVIDER_KEY` | No LLM provider key configured |
+| `PROVIDER_ERROR` | Error from the LLM provider (OpenAI, etc.) |
+| `INVALID_REQUEST` | Invalid request format |
+| `NETWORK_ERROR` | Network connectivity error |
+| `TIMEOUT` | Request timed out (30 second limit) |
+
+## Handling Specific Errors
+
+```typescript
+import { Tracia, TraciaError, TraciaErrorCode } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+try {
+  const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
+  console.log(result.text);
+} catch (error) {
+  if (error instanceof TraciaError) {
+    switch (error.code) {
+      case TraciaErrorCode.UNAUTHORIZED:
+        console.error('Invalid API key');
+        break;
+      case TraciaErrorCode.NOT_FOUND:
+        console.error('Prompt does not exist');
+        break;
+      case TraciaErrorCode.CONFLICT:
+        console.error('Resource already exists');
+        break;
+      case TraciaErrorCode.MISSING_VARIABLES:
+        console.error('Missing required template variables');
+        break;
+      case TraciaErrorCode.MISSING_PROVIDER_KEY:
+        console.error('No LLM provider configured');
+        break;
+      case TraciaErrorCode.PROVIDER_ERROR:
+        console.error('LLM provider error:', error.message);
+        break;
+      case TraciaErrorCode.NETWORK_ERROR:
+        console.error('Network error:', error.message);
+        break;
+      case TraciaErrorCode.TIMEOUT:
+        console.error('Request timed out');
+        break;
+      default:
+        console.error('Unknown error:', error.message);
+    }
+  }
+}
+```
+
+## Common Error Scenarios
+
+### Missing Variables
+
+When running a prompt that requires variables you didn't provide:
+
+```typescript
+// Prompt expects {{name}} and {{product}}
+const result = await tracia.prompts.run('welcome-email', {
+  name: 'Alice'
+  // Missing 'product' variable
+});
+// Throws TraciaError with code MISSING_VARIABLES
+```
+
+### Provider Not Configured
+
+When no LLM provider API key is configured:
+
+```typescript
+const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
+// Throws TraciaError with code MISSING_PROVIDER_KEY
+// Message: "No OpenAI API key configured. Add one in Settings > Providers."
+```
+
+### Prompt Not Found
+
+When requesting a prompt that doesn't exist:
+
+```typescript
+const prompt = await tracia.prompts.get('nonexistent-prompt');
+// Throws TraciaError with code NOT_FOUND
+```
+
+## Retry Logic
+
+For transient errors like network issues or rate limits, implement retry logic:
+
+```typescript
+async function runWithRetry(
+  slug: string,
+  variables: Record<string, string>,
+  maxRetries = 3
+) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await tracia.prompts.run(slug, variables);
+    } catch (error) {
+      if (error instanceof TraciaError) {
+        // Don't retry client errors
+        if ([
+          TraciaErrorCode.UNAUTHORIZED,
+          TraciaErrorCode.NOT_FOUND,
+          TraciaErrorCode.MISSING_VARIABLES,
+          TraciaErrorCode.INVALID_REQUEST,
+        ].includes(error.code)) {
+          throw error;
+        }
+
+        // Retry on transient errors
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+      throw error;
+    }
+  }
+}
+```

@@ -1,0 +1,86 @@
+---
+title: List Prompts
+description: Get all prompts for your account
+---
+
+```typescript
+const { prompts } = await tracia.prompts.list();
+```
+
+Retrieve all prompts associated with your account, ordered by most recently updated.
+
+## Parameters
+
+This method takes no parameters.
+
+## Response
+
+```typescript
+interface PromptListItem {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  provider: 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | null;
+  model: string | null;
+  temperature: number | null;
+  maxOutputTokens: number | null;
+  currentVersion: number;
+  variables: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+## Examples
+
+### Basic Usage
+
+```typescript
+const { prompts } = await tracia.prompts.list();
+
+console.log(`Found ${prompts.length} prompts`);
+```
+
+### Iterating Over Prompts
+
+```typescript
+const { prompts } = await tracia.prompts.list();
+
+prompts.forEach(prompt => {
+  console.log(`${prompt.name} (${prompt.slug}) - v${prompt.currentVersion}`);
+  console.log(`  Variables: ${prompt.variables.join(', ') || 'none'}`);
+});
+```
+
+### Filtering Prompts
+
+```typescript
+const { prompts } = await tracia.prompts.list();
+
+// Find prompts with specific variables
+const emailPrompts = prompts.filter(p =>
+  p.variables.includes('email')
+);
+
+// Find prompts using a specific model
+const gpt4Prompts = prompts.filter(p =>
+  p.model === 'gpt-4'
+);
+```
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const { prompts } = await tracia.prompts.list();
+} catch (error) {
+  if (error instanceof TraciaError) {
+    if (error.code === TraciaErrorCode.UNAUTHORIZED) {
+      console.error('Invalid API key');
+    }
+  }
+}
+```

@@ -1,0 +1,127 @@
+---
+title: Update Prompt
+description: Update an existing prompt
+---
+
+```typescript
+const prompt = await tracia.prompts.update(slug, options);
+```
+
+Update an existing prompt's metadata or content. If the content changes, a new version is automatically created.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `string` | Yes | The prompt slug to update |
+| `options.name` | `string` | No | New display name |
+| `options.slug` | `string` | No | New slug |
+| `options.description` | `string` | No | New description (empty string to clear) |
+| `options.content` | `PromptMessage[]` | No | New content (creates new version) |
+
+## Response
+
+Returns the updated `Prompt` object with the new version number if content changed.
+
+## Examples
+
+### Update Metadata Only
+
+```typescript
+const prompt = await tracia.prompts.update('welcome-email', {
+  name: 'Welcome Email v2',
+  description: 'Updated welcome email template',
+});
+
+// Version stays the same when only metadata changes
+console.log(prompt.currentVersion); // 1
+```
+
+### Update Content (Creates New Version)
+
+```typescript
+const prompt = await tracia.prompts.update('welcome-email', {
+  content: [
+    { id: 'msg_1', role: 'system', content: 'You write friendly, casual emails.' },
+    { id: 'msg_2', role: 'user', content: 'Write a welcome email for {{name}} at {{company}}.' },
+  ],
+});
+
+// Version incremented because content changed
+console.log(prompt.currentVersion); // 2
+console.log(prompt.variables); // ['name', 'company']
+```
+
+### Change Slug
+
+```typescript
+const prompt = await tracia.prompts.update('welcome-email', {
+  slug: 'onboarding-email',
+});
+
+// Now accessible at new slug
+const samePrompt = await tracia.prompts.get('onboarding-email');
+```
+
+### Clear Description
+
+```typescript
+const prompt = await tracia.prompts.update('welcome-email', {
+  description: '', // Set to empty string to clear
+});
+
+console.log(prompt.description); // null
+```
+
+## Versioning Behavior
+
+<Info>
+  Content changes automatically create a new version. This allows you to track changes over time and see which version was used for each trace.
+</Info>
+
+```typescript
+// Version 1: Original content
+const v1 = await tracia.prompts.create({
+  name: 'My Prompt',
+  content: [{ id: '1', role: 'user', content: 'Hello {{name}}' }],
+});
+console.log(v1.currentVersion); // 1
+
+// Version 2: Updated content
+const v2 = await tracia.prompts.update('my-prompt', {
+  content: [{ id: '1', role: 'user', content: 'Hi {{name}}!' }],
+});
+console.log(v2.currentVersion); // 2
+
+// Metadata update: No new version
+const v2b = await tracia.prompts.update('my-prompt', {
+  name: 'My Updated Prompt',
+});
+console.log(v2b.currentVersion); // Still 2
+```
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const prompt = await tracia.prompts.update('welcome-email', {
+    slug: 'existing-slug',
+  });
+} catch (error) {
+  if (error instanceof TraciaError) {
+    switch (error.code) {
+      case TraciaErrorCode.NOT_FOUND:
+        console.error('Prompt does not exist');
+        break;
+      case TraciaErrorCode.CONFLICT:
+        console.error('New slug already in use');
+        break;
+      case TraciaErrorCode.INVALID_REQUEST:
+        console.error('Invalid slug format');
+        break;
+    }
+  }
+}
+```

@@ -1,0 +1,136 @@
+---
+title: List Traces
+api: GET /api/v1/traces
+description: Get traces with optional filters and pagination
+---
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+<ParamField query="promptSlug" type="string">
+  Filter by prompt slug
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by status: `SUCCESS` or `ERROR`
+</ParamField>
+
+<ParamField query="startDate" type="string">
+  Filter traces created after this ISO 8601 date
+</ParamField>
+
+<ParamField query="endDate" type="string">
+  Filter traces created before this ISO 8601 date
+</ParamField>
+
+<ParamField query="userId" type="string">
+  Filter by end user ID
+</ParamField>
+
+<ParamField query="sessionId" type="string">
+  Filter by session ID
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Comma-separated list of tags (AND logic)
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Number of results per page (max 100, default 50)
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Cursor for pagination (from previous response)
+</ParamField>
+
+## Response
+
+<ResponseField name="traces" type="array">
+  Array of trace objects
+  <Expandable title="Trace object">
+    <ResponseField name="id" type="string">
+      Internal identifier
+    </ResponseField>
+    <ResponseField name="traceId" type="string">
+      External trace ID (e.g., `tr_abc123`)
+    </ResponseField>
+    <ResponseField name="promptSlug" type="string">
+      Slug of the prompt that was run
+    </ResponseField>
+    <ResponseField name="model" type="string">
+      Model used (e.g., `gpt-4`)
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      `SUCCESS` or `ERROR`
+    </ResponseField>
+    <ResponseField name="latencyMs" type="number">
+      Execution time in milliseconds
+    </ResponseField>
+    <ResponseField name="inputTokens" type="number">
+      Number of input tokens
+    </ResponseField>
+    <ResponseField name="outputTokens" type="number">
+      Number of output tokens
+    </ResponseField>
+    <ResponseField name="totalTokens" type="number">
+      Total tokens used
+    </ResponseField>
+    <ResponseField name="cost" type="number | null">
+      Cost in USD
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="nextCursor" type="string | null">
+  Cursor for the next page of results
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://app.tracia.io/api/v1/traces?promptSlug=welcome-email&limit=20" \
+  -H "Authorization: Bearer tr_your_api_key"
+```
+
+```typescript SDK
+const { traces, nextCursor } = await tracia.traces.list({
+  promptSlug: 'welcome-email',
+  limit: 20
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "traces": [
+    {
+      "id": "clx1abc123",
+      "traceId": "tr_abc123def456",
+      "promptSlug": "welcome-email",
+      "model": "gpt-4",
+      "status": "SUCCESS",
+      "latencyMs": 1250,
+      "inputTokens": 150,
+      "outputTokens": 320,
+      "totalTokens": 470,
+      "cost": 0.0234,
+      "createdAt": "2024-01-15T10:30:00.000Z"
+    }
+  ],
+  "nextCursor": "clx2def456"
+}
+```
+
+```json 401
+{
+  "code": "UNAUTHORIZED",
+  "message": "Invalid or missing API key"
+}
+```
+</ResponseExample>

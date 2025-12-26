@@ -1,0 +1,96 @@
+---
+title: Overview
+description: SDK reference for trace operations
+---
+
+All trace operations are available under the `tracia.traces` namespace. Traces are automatically created when you run prompts and provide visibility into LLM usage, performance, and costs.
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+// List traces with filters
+const { traces, nextCursor } = await tracia.traces.list({
+  promptSlug: 'welcome-email',
+  status: 'SUCCESS',
+  limit: 20
+});
+
+// Get a single trace
+const trace = await tracia.traces.get('tr_abc123def456');
+```
+
+## Available Methods
+
+<CardGroup cols={2}>
+  <Card title="List" icon="list" href="/sdk-node/traces/list">
+    Get traces with filters and pagination
+  </Card>
+  <Card title="Get" icon="eye" href="/sdk-node/traces/get">
+    Retrieve full details of a single trace
+  </Card>
+</CardGroup>
+
+## Types
+
+### Trace
+
+```typescript
+interface Trace {
+  id: string;
+  traceId: string;
+  promptSlug: string;
+  promptVersion: number;
+  model: string;
+  provider: string;
+  input: { messages: PromptMessage[] };
+  variables: Record<string, string> | null;
+  output: string | null;
+  status: 'SUCCESS' | 'ERROR';
+  error: string | null;
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cost: number | null;
+  tags: string[];
+  userId: string | null;
+  sessionId: string | null;
+  createdAt: string;
+}
+```
+
+### TraceListItem
+
+```typescript
+interface TraceListItem {
+  id: string;
+  traceId: string;
+  promptSlug: string;
+  model: string;
+  status: 'SUCCESS' | 'ERROR';
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cost: number | null;
+  createdAt: string;
+}
+```
+
+### ListTracesOptions
+
+```typescript
+interface ListTracesOptions {
+  promptSlug?: string;
+  status?: 'SUCCESS' | 'ERROR';
+  startDate?: Date;
+  endDate?: Date;
+  userId?: string;
+  sessionId?: string;
+  tags?: string[];
+  limit?: number;
+  cursor?: string;
+}
+```

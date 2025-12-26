@@ -1,0 +1,161 @@
+---
+title: Get Trace
+api: GET /api/v1/traces/{traceId}
+description: Get full details of a single trace
+---
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+<ParamField path="traceId" type="string" required>
+  The trace ID (e.g., `tr_abc123def456`)
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Internal identifier
+</ResponseField>
+
+<ResponseField name="traceId" type="string">
+  External trace ID
+</ResponseField>
+
+<ResponseField name="promptSlug" type="string">
+  Slug of the prompt that was run
+</ResponseField>
+
+<ResponseField name="promptVersion" type="number">
+  Version of the prompt used
+</ResponseField>
+
+<ResponseField name="model" type="string">
+  Model used (e.g., `gpt-4`)
+</ResponseField>
+
+<ResponseField name="provider" type="string">
+  Provider name (e.g., `openai`)
+</ResponseField>
+
+<ResponseField name="input" type="object">
+  Input messages sent to the model
+  <Expandable title="Input object">
+    <ResponseField name="messages" type="array">
+      Array of message objects with `role` and `content`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="variables" type="object | null">
+  Template variables used in the prompt
+</ResponseField>
+
+<ResponseField name="output" type="string | null">
+  Model response text
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `SUCCESS` or `ERROR`
+</ResponseField>
+
+<ResponseField name="error" type="string | null">
+  Error message if status is `ERROR`
+</ResponseField>
+
+<ResponseField name="latencyMs" type="number">
+  Execution time in milliseconds
+</ResponseField>
+
+<ResponseField name="inputTokens" type="number">
+  Number of input tokens
+</ResponseField>
+
+<ResponseField name="outputTokens" type="number">
+  Number of output tokens
+</ResponseField>
+
+<ResponseField name="totalTokens" type="number">
+  Total tokens used
+</ResponseField>
+
+<ResponseField name="cost" type="number | null">
+  Cost in USD
+</ResponseField>
+
+<ResponseField name="tags" type="string[]">
+  Tags associated with this trace
+</ResponseField>
+
+<ResponseField name="userId" type="string | null">
+  End user ID
+</ResponseField>
+
+<ResponseField name="sessionId" type="string | null">
+  Session ID
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET https://app.tracia.io/api/v1/traces/tr_abc123def456 \
+  -H "Authorization: Bearer tr_your_api_key"
+```
+
+```typescript SDK
+const trace = await tracia.traces.get('tr_abc123def456');
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200
+{
+  "id": "clx1abc123",
+  "traceId": "tr_abc123def456",
+  "promptSlug": "welcome-email",
+  "promptVersion": 3,
+  "model": "gpt-4",
+  "provider": "openai",
+  "input": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant that writes professional emails."
+      },
+      {
+        "role": "user",
+        "content": "Write a welcome email for Alice who just signed up for Tracia."
+      }
+    ]
+  },
+  "variables": {
+    "name": "Alice",
+    "product": "Tracia"
+  },
+  "output": "Subject: Welcome to Tracia, Alice!\n\nDear Alice,\n\nThank you for signing up...",
+  "status": "SUCCESS",
+  "error": null,
+  "latencyMs": 1250,
+  "inputTokens": 150,
+  "outputTokens": 320,
+  "totalTokens": 470,
+  "cost": 0.0234,
+  "tags": ["production", "v2"],
+  "userId": "user_123",
+  "sessionId": "session_456",
+  "createdAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+```json 404
+{
+  "code": "NOT_FOUND",
+  "message": "Trace not found: tr_abc123def456"
+}
+```
+</ResponseExample>
