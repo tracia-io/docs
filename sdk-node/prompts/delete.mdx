@@ -1,0 +1,100 @@
+---
+title: Delete Prompt
+description: Delete a prompt and all its versions
+---
+
+```typescript
+await tracia.prompts.delete(slug);
+```
+
+Permanently delete a prompt and all its versions.
+
+<Warning>
+  This action is irreversible. All versions of the prompt will be permanently deleted.
+</Warning>
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `string` | Yes | The prompt slug to delete |
+
+## Response
+
+Returns `void` on success.
+
+## Examples
+
+### Basic Usage
+
+```typescript
+await tracia.prompts.delete('welcome-email');
+console.log('Prompt deleted');
+```
+
+### With Confirmation
+
+```typescript
+async function deletePromptWithConfirmation(slug: string) {
+  // Get prompt details first
+  const prompt = await tracia.prompts.get(slug);
+
+  console.log(`About to delete: ${prompt.name}`);
+  console.log(`  - ${prompt.currentVersion} version(s)`);
+  console.log(`  - Created: ${prompt.createdAt}`);
+
+  // In a real app, you'd prompt for user confirmation here
+  const confirmed = true;
+
+  if (confirmed) {
+    await tracia.prompts.delete(slug);
+    console.log('Deleted successfully');
+  }
+}
+```
+
+### Bulk Delete
+
+```typescript
+async function deleteAllPrompts() {
+  const { prompts } = await tracia.prompts.list();
+
+  for (const prompt of prompts) {
+    await tracia.prompts.delete(prompt.slug);
+    console.log(`Deleted: ${prompt.name}`);
+  }
+}
+```
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  await tracia.prompts.delete('welcome-email');
+} catch (error) {
+  if (error instanceof TraciaError) {
+    if (error.code === TraciaErrorCode.NOT_FOUND) {
+      console.error('Prompt does not exist (may have already been deleted)');
+    }
+  }
+}
+```
+
+### Idempotent Delete
+
+```typescript
+async function safeDelete(slug: string) {
+  try {
+    await tracia.prompts.delete(slug);
+    return true;
+  } catch (error) {
+    if (error instanceof TraciaError && error.code === TraciaErrorCode.NOT_FOUND) {
+      // Already deleted, treat as success
+      return true;
+    }
+    throw error;
+  }
+}
+```

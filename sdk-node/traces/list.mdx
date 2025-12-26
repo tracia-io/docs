@@ -1,0 +1,139 @@
+---
+title: List Traces
+description: Get traces with filters and pagination
+---
+
+```typescript
+const { traces, nextCursor } = await tracia.traces.list(options);
+```
+
+Retrieve traces with optional filters and cursor-based pagination.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `options.promptSlug` | `string` | No | Filter by prompt slug |
+| `options.status` | `'SUCCESS' \| 'ERROR'` | No | Filter by status |
+| `options.startDate` | `Date` | No | Filter traces created after this date |
+| `options.endDate` | `Date` | No | Filter traces created before this date |
+| `options.userId` | `string` | No | Filter by end user ID |
+| `options.sessionId` | `string` | No | Filter by session ID |
+| `options.tags` | `string[]` | No | Filter by tags (AND logic) |
+| `options.limit` | `number` | No | Results per page (max 100, default 50) |
+| `options.cursor` | `string` | No | Cursor from previous response |
+
+## Response
+
+```typescript
+interface ListTracesResult {
+  traces: TraceListItem[];
+  nextCursor?: string;
+}
+
+interface TraceListItem {
+  id: string;
+  traceId: string;
+  promptSlug: string;
+  model: string;
+  status: 'SUCCESS' | 'ERROR';
+  latencyMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cost: number | null;
+  createdAt: string;
+}
+```
+
+## Examples
+
+### Basic Usage
+
+```typescript
+const { traces } = await tracia.traces.list();
+
+console.log(`Found ${traces.length} traces`);
+```
+
+### Filtering by Prompt
+
+```typescript
+const { traces } = await tracia.traces.list({
+  promptSlug: 'welcome-email',
+  status: 'SUCCESS'
+});
+
+traces.forEach(trace => {
+  console.log(`${trace.traceId}: ${trace.latencyMs}ms, ${trace.totalTokens} tokens`);
+});
+```
+
+### Date Range Filtering
+
+```typescript
+const { traces } = await tracia.traces.list({
+  startDate: new Date('2024-01-01'),
+  endDate: new Date('2024-01-31')
+});
+```
+
+### Filtering by Tags
+
+```typescript
+const { traces } = await tracia.traces.list({
+  tags: ['production', 'v2']  // Must have ALL tags
+});
+```
+
+### Pagination
+
+```typescript
+async function getAllTraces() {
+  const allTraces = [];
+  let cursor: string | undefined;
+
+  do {
+    const { traces, nextCursor } = await tracia.traces.list({
+      limit: 100,
+      cursor
+    });
+
+    allTraces.push(...traces);
+    cursor = nextCursor;
+  } while (cursor);
+
+  return allTraces;
+}
+```
+
+### Calculating Costs
+
+```typescript
+const { traces } = await tracia.traces.list({
+  promptSlug: 'welcome-email',
+  startDate: new Date('2024-01-01')
+});
+
+const totalCost = traces.reduce((sum, t) => sum + (t.cost || 0), 0);
+const totalTokens = traces.reduce((sum, t) => sum + t.totalTokens, 0);
+
+console.log(`Total cost: $${totalCost.toFixed(4)}`);
+console.log(`Total tokens: ${totalTokens}`);
+```
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const { traces } = await tracia.traces.list();
+} catch (error) {
+  if (error instanceof TraciaError) {
+    if (error.code === TraciaErrorCode.UNAUTHORIZED) {
+      console.error('Invalid API key');
+    }
+  }
+}
+```

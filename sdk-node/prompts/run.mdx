@@ -1,0 +1,106 @@
+---
+title: Run Prompt
+description: Execute a prompt and get the LLM response
+---
+
+```typescript
+const result = await tracia.prompts.run(slug, variables?, options?);
+```
+
+Execute a prompt with variable substitution and get the generated response. Tracia handles template rendering, LLM API calls, and automatically logs a trace.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `string` | Yes | The prompt slug |
+| `variables` | `Record<string, string>` | No | Template variables |
+| `options.model` | `string` | No | Override the default model |
+| `options.tags` | `string[]` | No | Tags for filtering traces |
+| `options.userId` | `string` | No | End user identifier |
+| `options.sessionId` | `string` | No | Session identifier |
+
+## Response
+
+```typescript
+interface RunResult {
+  text: string;           // The generated text
+  traceId: string;        // Unique trace identifier
+  promptVersion: number;  // Version of the prompt used
+  latencyMs: number;      // Request latency in milliseconds
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+  cost: number;           // Cost in USD
+}
+```
+
+## Examples
+
+### Basic Usage
+
+```typescript
+const result = await tracia.prompts.run('welcome-email', {
+  name: 'Alice',
+  product: 'Tracia'
+});
+
+console.log(result.text);
+// "Dear Alice, Welcome to Tracia!..."
+```
+
+### With Options
+
+```typescript
+const result = await tracia.prompts.run(
+  'welcome-email',
+  { name: 'Alice', product: 'Tracia' },
+  {
+    model: 'gpt-4',
+    tags: ['onboarding', 'email'],
+    userId: 'user_123',
+    sessionId: 'session_abc'
+  }
+);
+```
+
+### Accessing Metadata
+
+```typescript
+const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
+
+console.log(`Latency: ${result.latencyMs}ms`);
+console.log(`Tokens: ${result.usage.totalTokens}`);
+console.log(`Cost: $${result.cost.toFixed(4)}`);
+console.log(`Trace ID: ${result.traceId}`);
+console.log(`Prompt Version: ${result.promptVersion}`);
+```
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
+} catch (error) {
+  if (error instanceof TraciaError) {
+    switch (error.code) {
+      case TraciaErrorCode.NOT_FOUND:
+        console.error('Prompt does not exist');
+        break;
+      case TraciaErrorCode.MISSING_VARIABLES:
+        console.error('Missing required variables');
+        break;
+      case TraciaErrorCode.MISSING_PROVIDER_KEY:
+        console.error('No LLM provider configured');
+        break;
+      case TraciaErrorCode.PROVIDER_ERROR:
+        console.error('LLM provider error:', error.message);
+        break;
+    }
+  }
+}
+```

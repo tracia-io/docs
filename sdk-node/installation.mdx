@@ -1,0 +1,85 @@
+---
+title: Installation
+description: Install and configure the Tracia SDK
+---
+
+## Installation
+
+Install the Tracia SDK using your preferred package manager:
+
+<CodeGroup>
+```bash npm
+npm install tracia
+```
+
+```bash pnpm
+pnpm add tracia
+```
+
+```bash yarn
+yarn add tracia
+```
+</CodeGroup>
+
+## Requirements
+
+- Node.js 18+ (uses native `fetch`)
+- Works in modern browsers with native `fetch` support
+
+## Configuration
+
+Initialize the Tracia client with your API key:
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({
+  apiKey: process.env.TRACIA_API_KEY
+});
+```
+
+### Configuration Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `apiKey` | `string` | Yes | Your Tracia API key (starts with `tr_`) |
+
+### Environment Variables
+
+We recommend storing your API key in environment variables:
+
+```bash .env
+TRACIA_API_KEY=tr_your_api_key_here
+```
+
+<Warning>
+  Never commit API keys to version control. Use environment variables or a secrets manager.
+</Warning>
+
+## TypeScript Support
+
+The SDK is written in TypeScript and exports all types:
+
+```typescript
+import {
+  Tracia,
+  TraciaOptions,
+  RunOptions,
+  RunResult,
+  TokenUsage,
+  Prompt,
+  PromptListItem,
+  PromptMessage,
+  MessageRole,
+  CreatePromptOptions,
+  UpdatePromptOptions,
+  TraciaError,
+  TraciaErrorCode,
+} from 'tracia';
+```
+
+## Next Steps
+
+<Card title="Prompts SDK" icon="code" href="/sdk-node/prompts">
+  Learn how to run, list, create, update, and delete prompts
+</Card>

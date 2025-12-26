@@ -1,0 +1,98 @@
+---
+title: Get Prompt
+description: Retrieve a single prompt with its content
+---
+
+```typescript
+const prompt = await tracia.prompts.get(slug);
+```
+
+Retrieve a single prompt by its slug, including the full content of its current version.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `string` | Yes | The prompt slug |
+
+## Response
+
+```typescript
+interface Prompt {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  provider: 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | null;
+  model: string | null;
+  temperature: number | null;
+  maxOutputTokens: number | null;
+  currentVersion: number;
+  content: PromptMessage[];
+  variables: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PromptMessage {
+  id: string;
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+```
+
+## Examples
+
+### Basic Usage
+
+```typescript
+const prompt = await tracia.prompts.get('welcome-email');
+
+console.log(prompt.name);        // "Welcome Email"
+console.log(prompt.currentVersion); // 3
+```
+
+### Accessing Content
+
+```typescript
+const prompt = await tracia.prompts.get('welcome-email');
+
+prompt.content.forEach(message => {
+  console.log(`[${message.role}]: ${message.content}`);
+});
+// [system]: You are a helpful assistant...
+// [user]: Write a welcome email for {{name}}...
+```
+
+### Checking Variables
+
+```typescript
+const prompt = await tracia.prompts.get('welcome-email');
+
+console.log('Required variables:', prompt.variables);
+// ['name', 'product']
+
+// Validate before running
+const myVariables = { name: 'Alice' };
+const missing = prompt.variables.filter(v => !(v in myVariables));
+
+if (missing.length > 0) {
+  console.error(`Missing variables: ${missing.join(', ')}`);
+}
+```
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const prompt = await tracia.prompts.get('welcome-email');
+} catch (error) {
+  if (error instanceof TraciaError) {
+    if (error.code === TraciaErrorCode.NOT_FOUND) {
+      console.error('Prompt does not exist');
+    }
+  }
+}
+```

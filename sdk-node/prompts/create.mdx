@@ -1,0 +1,121 @@
+---
+title: Create Prompt
+description: Create a new prompt
+---
+
+```typescript
+const prompt = await tracia.prompts.create(options);
+```
+
+Create a new prompt with the specified content. The prompt is created at version 1.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `string` | Yes | Display name for the prompt |
+| `slug` | `string` | No | URL-friendly identifier (auto-generated if not provided) |
+| `description` | `string` | No | Description of the prompt |
+| `content` | `PromptMessage[]` | Yes | Array of messages |
+
+### PromptMessage
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | Yes | Unique identifier for the message |
+| `role` | `string` | Yes | `system`, `user`, or `assistant` |
+| `content` | `string` | Yes | Message content (supports `{{variables}}`) |
+
+## Response
+
+Returns the created `Prompt` object.
+
+## Examples
+
+### Basic Usage
+
+```typescript
+const prompt = await tracia.prompts.create({
+  name: 'Welcome Email',
+  content: [
+    { id: 'msg_1', role: 'system', content: 'You are a helpful assistant.' },
+    { id: 'msg_2', role: 'user', content: 'Write a welcome email for {{name}}.' },
+  ],
+});
+
+console.log(prompt.slug);    // "welcome-email" (auto-generated)
+console.log(prompt.variables); // ["name"]
+```
+
+### With Custom Slug
+
+```typescript
+const prompt = await tracia.prompts.create({
+  name: 'Welcome Email',
+  slug: 'onboarding-welcome',
+  description: 'Sent to new users after signup',
+  content: [
+    { id: 'msg_1', role: 'system', content: 'You write professional emails.' },
+    { id: 'msg_2', role: 'user', content: 'Write a welcome email for {{name}} at {{company}}.' },
+  ],
+});
+```
+
+### Multi-Turn Conversation
+
+```typescript
+const prompt = await tracia.prompts.create({
+  name: 'Code Review Assistant',
+  content: [
+    {
+      id: 'msg_1',
+      role: 'system',
+      content: 'You are a senior software engineer conducting code reviews.'
+    },
+    {
+      id: 'msg_2',
+      role: 'user',
+      content: 'Please review this {{language}} code:\n\n{{code}}'
+    },
+    {
+      id: 'msg_3',
+      role: 'assistant',
+      content: 'I\'ll review this code for correctness, performance, and best practices.'
+    },
+    {
+      id: 'msg_4',
+      role: 'user',
+      content: 'Focus especially on {{focus_area}}.'
+    },
+  ],
+});
+```
+
+<Tip>
+  If you don't provide a slug, one will be auto-generated from the name. Slugs must be lowercase with hyphens only.
+</Tip>
+
+## Error Handling
+
+```typescript
+import { TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const prompt = await tracia.prompts.create({
+    name: 'Welcome Email',
+    slug: 'welcome-email',
+    content: [...]
+  });
+} catch (error) {
+  if (error instanceof TraciaError) {
+    switch (error.code) {
+      case TraciaErrorCode.CONFLICT:
+        console.error('A prompt with this slug already exists');
+        break;
+      case TraciaErrorCode.INVALID_REQUEST:
+        console.error('Invalid request:', error.message);
+        break;
+    }
+  }
+}
+```
