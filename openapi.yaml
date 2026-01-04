@@ -61,6 +61,10 @@ components:
           type: number
           nullable: true
           description: Temperature setting for the model (0-2)
+        topP:
+          type: number
+          nullable: true
+          description: Top-p (nucleus) sampling setting (0-1)
         maxOutputTokens:
           type: integer
           nullable: true
@@ -105,6 +109,9 @@ components:
           type: string
           nullable: true
         temperature:
+          type: number
+          nullable: true
+        topP:
           type: number
           nullable: true
         maxOutputTokens:

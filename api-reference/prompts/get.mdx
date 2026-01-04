@@ -44,6 +44,10 @@ description: Get a single prompt with its content
   Temperature setting for the model (0-2)
 </ResponseField>
 
+<ResponseField name="topP" type="number | null">
+  Top-p (nucleus) sampling setting (0-1)
+</ResponseField>
+
 <ResponseField name="maxOutputTokens" type="number | null">
   Maximum output tokens limit
 </ResponseField>
@@ -100,6 +104,7 @@ const prompt = await tracia.prompts.get('welcome-email');
   "provider": "OPENAI",
   "model": "gpt-4",
   "temperature": 0.7,
+  "topP": null,
   "maxOutputTokens": null,
   "currentVersion": 3,
   "content": [

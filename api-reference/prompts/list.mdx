@@ -36,6 +36,9 @@ description: Get all prompts for the authenticated user
     <ResponseField name="temperature" type="number | null">
       Temperature setting for the model (0-2)
     </ResponseField>
+    <ResponseField name="topP" type="number | null">
+      Top-p (nucleus) sampling setting (0-1)
+    </ResponseField>
     <ResponseField name="maxOutputTokens" type="number | null">
       Maximum output tokens limit
     </ResponseField>
@@ -77,6 +80,7 @@ const { prompts } = await tracia.prompts.list();
       "provider": "OPENAI",
       "model": "gpt-4",
       "temperature": 0.7,
+      "topP": null,
       "maxOutputTokens": null,
       "currentVersion": 3,
       "variables": ["name", "product"],
@@ -91,6 +95,7 @@ const { prompts } = await tracia.prompts.list();
       "provider": "OPENAI",
       "model": "gpt-3.5-turbo",
       "temperature": null,
+      "topP": null,
       "maxOutputTokens": null,
       "currentVersion": 1,
       "variables": ["customerName", "issue"],

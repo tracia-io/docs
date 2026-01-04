@@ -24,6 +24,7 @@ interface PromptListItem {
   provider: 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | null;
   model: string | null;
   temperature: number | null;
+  topP: number | null;
   maxOutputTokens: number | null;
   currentVersion: number;
   variables: string[];
