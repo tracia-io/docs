@@ -6,7 +6,7 @@ description: SDK reference for trace operations
 All trace operations are available under the `tracia.traces` namespace. Traces are automatically created when you run prompts and provide visibility into LLM usage, performance, and costs.
 
 ```typescript
-import { Tracia } from 'tracia';
+import { Tracia, Eval } from 'tracia';
 
 const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
 
@@ -19,16 +19,25 @@ const { traces, nextCursor } = await tracia.traces.list({
 
 // Get a single trace
 const trace = await tracia.traces.get('tr_abc123def456');
+
+// Submit an evaluation for a trace
+await tracia.traces.evaluate('tr_abc123def456', {
+  evaluator: 'quality',
+  value: Eval.POSITIVE
+});
 ```
 
 ## Available Methods
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="List" icon="list" href="/sdk-node/traces/list">
     Get traces with filters and pagination
   </Card>
   <Card title="Get" icon="eye" href="/sdk-node/traces/get">
     Retrieve full details of a single trace
+  </Card>
+  <Card title="Evaluate" icon="star" href="/sdk-node/traces/evaluate">
+    Submit evaluations for traces
   </Card>
 </CardGroup>
 
@@ -93,4 +102,39 @@ interface ListTracesOptions {
   limit?: number;
   cursor?: string;
 }
+```
+
+### EvaluateOptions
+
+```typescript
+interface EvaluateOptions {
+  evaluator: string;
+  value: number;
+  note?: string;
+}
+```
+
+### EvaluateResult
+
+```typescript
+interface EvaluateResult {
+  id: string;
+  evaluatorKey: string;
+  evaluatorName: string;
+  value: number;
+  source: string;
+  note: string | null;
+  createdAt: string;
+}
+```
+
+### Eval Constant
+
+Use the `Eval` constant for binary evaluations:
+
+```typescript
+import { Eval } from 'tracia';
+
+Eval.POSITIVE  // 1
+Eval.NEGATIVE  // 0
 ```

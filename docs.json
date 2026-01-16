@@ -41,7 +41,8 @@
                 "pages": [
                   "sdk-node/traces",
                   "sdk-node/traces/list",
-                  "sdk-node/traces/get"
+                  "sdk-node/traces/get",
+                  "sdk-node/traces/evaluate"
                 ]
               },
               "sdk-node/error-handling"
@@ -73,7 +74,8 @@
             "group": "Traces",
             "pages": [
               "api-reference/traces/list",
-              "api-reference/traces/get"
+              "api-reference/traces/get",
+              "api-reference/traces/evaluate"
             ]
           }
         ]
