@@ -1,0 +1,199 @@
+---
+title: Overview
+description: Execute LLM prompts directly against providers with automatic tracing
+---
+
+The `runLocal()` method lets you execute prompts directly against OpenAI, Anthropic, or Google while keeping your prompts in your codebase. You get full observability through Tracia without any added latency.
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Hello!' }
+  ]
+});
+
+console.log(result.text);
+```
+
+## Why runLocal()?
+
+Some teams prefer managing prompts in their codebase rather than in an external dashboard. This keeps prompts:
+- Version-controlled with your application code
+- Reviewed through your standard PR process
+- Deployed alongside the code that uses them
+- Constructed programmatically when needed
+
+`runLocal()` gives you full Tracia observability while respecting this workflow.
+
+## How It Works
+
+When you call `runLocal()`, the SDK:
+
+1. **Calls the provider SDK directly** - Your request goes straight to OpenAI, Anthropic, or Google using their native SDK. Tracia is not in the request path.
+
+2. **Sends the trace asynchronously** - After the LLM responds, trace data is sent to Tracia in the background. This is non-blocking and adds zero latency to your application.
+
+| | `prompts.run()` | `runLocal()` |
+|---|---|---|
+| **Prompts stored in** | Tracia dashboard | Your codebase |
+| **LLM call routed through** | Tracia API | Direct to provider SDK |
+| **Trace creation** | Automatic (server-side) | Async, non-blocking |
+
+## When to Use runLocal() vs prompts.run()
+
+**Use `runLocal()` when you want to:**
+- Keep prompts in your codebase, version-controlled with git
+- Build prompts programmatically (e.g., assembling messages based on context)
+- Prototype quickly without dashboard setup
+- Use Tracia purely for observability
+
+**Use `prompts.run()` when you want to:**
+- Edit prompts without code deployments
+- A/B test prompt versions from the dashboard
+- Let non-engineers manage prompt content
+- Track prompt versions separately from code versions
+
+| Use Case | Recommended Method |
+|----------|--------|
+| Prompts managed in Tracia dashboard | `prompts.run()` |
+| Prompts defined in code | `runLocal()` |
+| Prompts reviewed in PRs | `runLocal()` |
+| Quick prototyping | `runLocal()` |
+| A/B testing prompt versions | `prompts.run()` |
+| Programmatically constructed prompts | `runLocal()` |
+| Non-technical prompt editors | `prompts.run()` |
+
+## Quick Examples
+
+<CodeGroup>
+```typescript OpenAI
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'Explain quantum computing in simple terms.' }
+  ],
+  temperature: 0.7
+});
+```
+
+```typescript Anthropic
+const result = await tracia.runLocal({
+  model: 'claude-sonnet-4-20250514',
+  messages: [
+    { role: 'user', content: 'Write a haiku about programming.' }
+  ],
+  maxOutputTokens: 100
+});
+```
+
+```typescript Google
+const result = await tracia.runLocal({
+  model: 'gemini-2.0-flash',
+  messages: [
+    { role: 'user', content: 'What are the benefits of TypeScript?' }
+  ]
+});
+```
+</CodeGroup>
+
+## Available Methods
+
+<CardGroup cols={2}>
+  <Card title="Basic Usage" icon="play" href="/sdk-node/run-local/basic-usage">
+    Getting started with each provider
+  </Card>
+  <Card title="Parameters" icon="sliders" href="/sdk-node/run-local/parameters">
+    Complete RunLocalInput reference
+  </Card>
+  <Card title="Response" icon="arrow-right-from-bracket" href="/sdk-node/run-local/response">
+    RunLocalResult fields and usage
+  </Card>
+  <Card title="Providers" icon="plug" href="/sdk-node/run-local/providers">
+    OpenAI, Anthropic, Google setup
+  </Card>
+  <Card title="Models" icon="microchip" href="/sdk-node/run-local/models">
+    94+ supported models by provider
+  </Card>
+  <Card title="Variables" icon="code" href="/sdk-node/run-local/variables">
+    Template interpolation syntax
+  </Card>
+  <Card title="Tracing" icon="chart-line" href="/sdk-node/run-local/tracing">
+    Background traces, flush(), error handling
+  </Card>
+  <Card title="Advanced" icon="gear" href="/sdk-node/run-local/advanced">
+    Error handling, concurrent requests
+  </Card>
+</CardGroup>
+
+## Types
+
+### RunLocalInput
+
+```typescript
+interface RunLocalInput {
+  // Required
+  messages: LocalPromptMessage[];
+  model: string;
+
+  // Provider override (for custom/new models)
+  provider?: 'openai' | 'anthropic' | 'google';
+
+  // LLM configuration
+  temperature?: number;
+  maxOutputTokens?: number;
+  topP?: number;
+  stopSequences?: string[];
+  timeoutMs?: number;
+  customOptions?: Record<string, unknown>;
+
+  // Variable interpolation
+  variables?: Record<string, string>;
+
+  // Provider API key override
+  providerApiKey?: string;
+
+  // Tracing options
+  tags?: string[];
+  userId?: string;
+  sessionId?: string;
+  sendTrace?: boolean;  // default: true
+  traceId?: string;     // custom trace ID
+}
+```
+
+### RunLocalResult
+
+```typescript
+interface RunLocalResult {
+  text: string;
+  traceId: string;
+  latencyMs: number;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+  cost: number | null;
+  provider: 'openai' | 'anthropic' | 'google';
+  model: string;
+}
+```
+
+### LocalPromptMessage
+
+```typescript
+interface LocalPromptMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+```
+
+<Note>
+  Unlike `PromptMessage` used with stored prompts, `LocalPromptMessage` does not have an `id` field since messages are defined inline.
+</Note>

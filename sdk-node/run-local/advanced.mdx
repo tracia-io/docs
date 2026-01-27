@@ -1,0 +1,337 @@
+---
+title: Advanced
+description: Error handling patterns and concurrent requests
+---
+
+## Error Handling
+
+### Error Types
+
+```typescript
+import { Tracia, TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const result = await tracia.runLocal({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  });
+} catch (error) {
+  if (error instanceof TraciaError) {
+    switch (error.code) {
+      case TraciaErrorCode.MISSING_PROVIDER_SDK:
+        // Provider SDK not installed
+        console.error('Install the required SDK: npm install openai');
+        break;
+
+      case TraciaErrorCode.MISSING_PROVIDER_API_KEY:
+        // No API key found
+        console.error('Set OPENAI_API_KEY environment variable');
+        break;
+
+      case TraciaErrorCode.UNSUPPORTED_MODEL:
+        // Model not recognized (use provider override)
+        console.error('Specify provider explicitly for custom models');
+        break;
+
+      case TraciaErrorCode.PROVIDER_ERROR:
+        // Error from the LLM provider
+        console.error('Provider error:', error.message);
+        break;
+
+      case TraciaErrorCode.INVALID_REQUEST:
+        // Invalid input (missing model, empty messages, etc.)
+        console.error('Invalid request:', error.message);
+        break;
+
+      default:
+        console.error('Unexpected error:', error.message);
+    }
+  }
+}
+```
+
+### Retry Logic
+
+Implement retry logic for transient errors:
+
+```typescript
+import { Tracia, TraciaError, TraciaErrorCode } from 'tracia';
+
+async function runWithRetry(
+  tracia: Tracia,
+  input: RunLocalInput,
+  maxRetries = 3
+): Promise<RunLocalResult> {
+  const nonRetryableCodes = [
+    TraciaErrorCode.MISSING_PROVIDER_SDK,
+    TraciaErrorCode.MISSING_PROVIDER_API_KEY,
+    TraciaErrorCode.UNSUPPORTED_MODEL,
+    TraciaErrorCode.INVALID_REQUEST,
+  ];
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await tracia.runLocal(input);
+    } catch (error) {
+      if (error instanceof TraciaError) {
+        // Don't retry client errors
+        if (nonRetryableCodes.includes(error.code)) {
+          throw error;
+        }
+
+        // Retry on provider/network errors
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+      throw error;
+    }
+  }
+  throw new Error('Unreachable');
+}
+```
+
+### Error Recovery with Fallback
+
+Use a different model or provider as fallback:
+
+```typescript
+async function runWithFallback(messages: LocalPromptMessage[]) {
+  const models = ['gpt-4o', 'claude-sonnet-4-20250514', 'gemini-2.0-flash'];
+
+  for (const model of models) {
+    try {
+      return await tracia.runLocal({ model, messages });
+    } catch (error) {
+      if (error instanceof TraciaError && error.code === TraciaErrorCode.PROVIDER_ERROR) {
+        console.log(`${model} failed, trying next provider...`);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error('All providers failed');
+}
+```
+
+## Concurrent Requests
+
+### Parallel Execution
+
+Run multiple requests in parallel:
+
+```typescript
+const prompts = [
+  'Explain recursion',
+  'Explain closures',
+  'Explain promises'
+];
+
+const results = await Promise.all(
+  prompts.map(content =>
+    tracia.runLocal({
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content }],
+      tags: ['batch']
+    })
+  )
+);
+
+results.forEach((result, i) => {
+  console.log(`${prompts[i]}: ${result.usage.totalTokens} tokens`);
+});
+```
+
+### Rate Limiting
+
+Control concurrency to avoid rate limits:
+
+```typescript
+async function runWithConcurrencyLimit<T>(
+  tasks: (() => Promise<T>)[],
+  limit: number
+): Promise<T[]> {
+  const results: T[] = new Array(tasks.length);
+  let nextIndex = 0;
+
+  async function runNext(): Promise<void> {
+    const index = nextIndex++;
+    if (index >= tasks.length) return;
+    results[index] = await tasks[index]();
+    await runNext();
+  }
+
+  // Start up to `limit` workers
+  const workers = Array(Math.min(limit, tasks.length))
+    .fill(null)
+    .map(() => runNext());
+
+  await Promise.all(workers);
+  return results;
+}
+
+// Run with max 3 concurrent requests
+const tasks = prompts.map(content => () =>
+  tracia.runLocal({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content }]
+  })
+);
+
+const results = await runWithConcurrencyLimit(tasks, 3);
+```
+
+### Batch Processing with Progress
+
+```typescript
+async function processBatch(items: string[], onProgress?: (completed: number, total: number) => void) {
+  const results: RunLocalResult[] = [];
+  const total = items.length;
+
+  for (let i = 0; i < items.length; i++) {
+    const result = await tracia.runLocal({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: items[i] }],
+      tags: ['batch-processing']
+    });
+
+    results.push(result);
+    onProgress?.(i + 1, total);
+  }
+
+  return results;
+}
+
+// Usage
+await processBatch(items, (completed, total) => {
+  console.log(`Progress: ${completed}/${total} (${Math.round(completed/total*100)}%)`);
+});
+```
+
+## Timeout Handling
+
+Set request timeouts to prevent hanging:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Complex analysis...' }],
+  timeoutMs: 30000 // 30 seconds
+});
+```
+
+### Timeout with Fallback
+
+```typescript
+async function runWithTimeoutFallback(messages: LocalPromptMessage[]) {
+  try {
+    return await tracia.runLocal({
+      model: 'gpt-4o',
+      messages,
+      timeoutMs: 10000
+    });
+  } catch (error) {
+    // Try faster model on timeout
+    return await tracia.runLocal({
+      model: 'gpt-4o-mini',
+      messages,
+      timeoutMs: 30000
+    });
+  }
+}
+```
+
+## Multi-Tenant Applications
+
+Handle multiple API keys for different customers:
+
+```typescript
+class TenantLLMService {
+  private tracia: Tracia;
+  private apiKeys: Map<string, { openai?: string; anthropic?: string }>;
+
+  constructor(traciaApiKey: string) {
+    this.tracia = new Tracia({ apiKey: traciaApiKey });
+    this.apiKeys = new Map();
+  }
+
+  setTenantKeys(tenantId: string, keys: { openai?: string; anthropic?: string }) {
+    this.apiKeys.set(tenantId, keys);
+  }
+
+  async runForTenant(tenantId: string, input: Omit<RunLocalInput, 'providerApiKey'>) {
+    const keys = this.apiKeys.get(tenantId);
+    if (!keys) throw new Error('Tenant not found');
+
+    const provider = input.provider || this.detectProvider(input.model);
+    const providerApiKey = provider === 'openai' ? keys.openai : keys.anthropic;
+
+    return this.tracia.runLocal({
+      ...input,
+      providerApiKey,
+      userId: tenantId
+    });
+  }
+
+  private detectProvider(model: string): 'openai' | 'anthropic' {
+    return model.startsWith('claude') ? 'anthropic' : 'openai';
+  }
+}
+```
+
+## Logging and Monitoring
+
+### Structured Logging
+
+```typescript
+import { Tracia, RunLocalResult } from 'tracia';
+
+const tracia = new Tracia({
+  apiKey: process.env.TRACIA_API_KEY,
+  onTraceError: (error, traceId) => {
+    console.error(JSON.stringify({
+      level: 'error',
+      type: 'trace_submission_failed',
+      traceId,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }));
+  }
+});
+
+async function runWithLogging(input: RunLocalInput): Promise<RunLocalResult> {
+  const startTime = Date.now();
+
+  try {
+    const result = await tracia.runLocal(input);
+
+    console.log(JSON.stringify({
+      level: 'info',
+      type: 'llm_request',
+      traceId: result.traceId,
+      model: result.model,
+      provider: result.provider,
+      latencyMs: result.latencyMs,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens,
+      timestamp: new Date().toISOString()
+    }));
+
+    return result;
+  } catch (error) {
+    console.error(JSON.stringify({
+      level: 'error',
+      type: 'llm_request_failed',
+      model: input.model,
+      error: error instanceof Error ? error.message : String(error),
+      durationMs: Date.now() - startTime,
+      timestamp: new Date().toISOString()
+    }));
+    throw error;
+  }
+}
+```

@@ -1,0 +1,191 @@
+---
+title: Parameters
+description: Complete RunLocalInput parameter reference
+---
+
+```typescript
+const result = await tracia.runLocal(input: RunLocalInput);
+```
+
+## Required Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `messages` | `LocalPromptMessage[]` | Array of messages to send to the LLM |
+| `model` | `string` | Model identifier (e.g., `gpt-4o`, `claude-sonnet-4-20250514`) |
+
+### LocalPromptMessage
+
+```typescript
+interface LocalPromptMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+```
+
+## LLM Configuration
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `temperature` | `number` | Provider default | Controls randomness (0-2 for OpenAI/Google, 0-1 for Anthropic) |
+| `maxOutputTokens` | `number` | Provider default | Maximum tokens to generate |
+| `topP` | `number` | Provider default | Nucleus sampling threshold |
+| `stopSequences` | `string[]` | `undefined` | Stop generation when these sequences appear |
+| `timeoutMs` | `number` | `undefined` | Timeout in milliseconds for the LLM call |
+
+### Example
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a poem.' }],
+  temperature: 0.9,
+  maxOutputTokens: 500,
+  topP: 0.95,
+  stopSequences: ['---', 'THE END'],
+  timeoutMs: 30000
+});
+```
+
+## Provider Configuration
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `provider` | `'openai' \| 'anthropic' \| 'google'` | Auto-detected | Override provider detection for custom models |
+| `providerApiKey` | `string` | Environment variable | Override the default API key |
+| `customOptions` | `Record<string, unknown>` | `undefined` | Provider-specific options passed to the SDK |
+
+### Provider Override
+
+Use `provider` when using a model not in the built-in list:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'my-fine-tuned-gpt4',
+  provider: 'openai', // Required for custom models
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+```
+
+### Custom API Key
+
+Override the environment variable API key:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  providerApiKey: 'sk-different-key-for-this-request'
+});
+```
+
+### Custom Options
+
+Pass provider-specific options not covered by standard parameters:
+
+```typescript
+// OpenAI-specific options
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  customOptions: {
+    frequency_penalty: 0.5,
+    presence_penalty: 0.3,
+    logit_bias: { '50256': -100 }
+  }
+});
+```
+
+## Variable Interpolation
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `variables` | `Record<string, string>` | `undefined` | Variables for `{{placeholder}}` interpolation |
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You help with {{topic}}.' },
+    { role: 'user', content: 'Explain {{concept}} to a {{audience}}.' }
+  ],
+  variables: {
+    topic: 'programming',
+    concept: 'recursion',
+    audience: 'beginner'
+  }
+});
+```
+
+See [Variables](/sdk-node/run-local/variables) for more details.
+
+## Tracing Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `tags` | `string[]` | `undefined` | Tags for filtering traces in the dashboard |
+| `userId` | `string` | `undefined` | End user identifier |
+| `sessionId` | `string` | `undefined` | Session identifier for grouping traces |
+| `sendTrace` | `boolean` | `true` | Whether to send a trace to Tracia |
+| `traceId` | `string` | Auto-generated | Custom trace ID (must match `tr_` + 16 hex chars) |
+
+### Example
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  tags: ['production', 'chat'],
+  userId: 'user_123',
+  sessionId: 'session_abc',
+  traceId: 'tr_1234567890abcdef'
+});
+```
+
+### Disabling Traces
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  sendTrace: false
+});
+
+console.log(result.traceId); // Empty string
+```
+
+See [Tracing](/sdk-node/run-local/tracing) for more details.
+
+## Complete Example
+
+```typescript
+const result = await tracia.runLocal({
+  // Required
+  model: 'claude-sonnet-4-20250514',
+  messages: [
+    { role: 'system', content: 'You are a {{role}}.' },
+    { role: 'user', content: '{{question}}' }
+  ],
+
+  // LLM configuration
+  temperature: 0.7,
+  maxOutputTokens: 1000,
+  topP: 0.9,
+  stopSequences: ['---'],
+  timeoutMs: 60000,
+
+  // Provider configuration
+  providerApiKey: process.env.ANTHROPIC_API_KEY_PROD,
+
+  // Variables
+  variables: {
+    role: 'helpful assistant',
+    question: 'What is the meaning of life?'
+  },
+
+  // Tracing
+  tags: ['production', 'philosophy'],
+  userId: 'user_123',
+  sessionId: 'session_abc'
+});
+```

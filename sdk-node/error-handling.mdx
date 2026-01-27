@@ -30,7 +30,10 @@ try {
 | `NOT_FOUND` | The requested resource (prompt, etc.) does not exist |
 | `CONFLICT` | Resource already exists (e.g., duplicate slug) |
 | `MISSING_VARIABLES` | Required template variables are missing |
-| `MISSING_PROVIDER_KEY` | No LLM provider key configured |
+| `MISSING_PROVIDER_KEY` | No LLM provider key configured (for `prompts.run()`) |
+| `MISSING_PROVIDER_SDK` | Provider SDK not installed (for `runLocal()`) |
+| `MISSING_PROVIDER_API_KEY` | No provider API key provided (for `runLocal()`) |
+| `UNSUPPORTED_MODEL` | Model not recognized, use `provider` override |
 | `PROVIDER_ERROR` | Error from the LLM provider (OpenAI, etc.) |
 | `INVALID_REQUEST` | Invalid request format |
 | `NETWORK_ERROR` | Network connectivity error |
@@ -73,6 +76,15 @@ try {
       case TraciaErrorCode.TIMEOUT:
         console.error('Request timed out');
         break;
+      case TraciaErrorCode.MISSING_PROVIDER_SDK:
+        console.error('Provider SDK not installed');
+        break;
+      case TraciaErrorCode.MISSING_PROVIDER_API_KEY:
+        console.error('Provider API key not set');
+        break;
+      case TraciaErrorCode.UNSUPPORTED_MODEL:
+        console.error('Model not recognized');
+        break;
       default:
         console.error('Unknown error:', error.message);
     }
@@ -112,6 +124,77 @@ When requesting a prompt that doesn't exist:
 ```typescript
 const prompt = await tracia.prompts.get('nonexistent-prompt');
 // Throws TraciaError with code NOT_FOUND
+```
+
+## runLocal() Errors
+
+The `runLocal()` method has additional error codes specific to local execution.
+
+### Missing Provider SDK
+
+When the required provider SDK is not installed:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+// Throws TraciaError with code MISSING_PROVIDER_SDK
+// Message: "Provider SDK for openai is not installed. Please install the required SDK."
+```
+
+**Solution:** Install the provider SDK:
+```bash
+npm install openai        # For OpenAI models
+npm install @anthropic-ai/sdk  # For Anthropic models
+npm install @google/generative-ai  # For Google models
+```
+
+### Missing Provider API Key
+
+When no API key is found for the provider:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+// Throws TraciaError with code MISSING_PROVIDER_API_KEY
+// Message: "Missing API key for openai. Set the OPENAI_API_KEY environment variable or provide providerApiKey in options."
+```
+
+**Solution:** Set the environment variable or provide `providerApiKey`:
+```typescript
+// Option 1: Environment variable
+// OPENAI_API_KEY=sk-your-key
+
+// Option 2: Explicit key
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  providerApiKey: 'sk-your-key'
+});
+```
+
+### Unsupported Model
+
+When using a custom model without specifying the provider:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'my-fine-tuned-model',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+// Throws TraciaError with code UNSUPPORTED_MODEL
+```
+
+**Solution:** Specify the provider explicitly:
+```typescript
+const result = await tracia.runLocal({
+  model: 'my-fine-tuned-model',
+  provider: 'openai',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
 ```
 
 ## Retry Logic

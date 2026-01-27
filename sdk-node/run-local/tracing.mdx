@@ -1,0 +1,183 @@
+---
+title: Tracing
+description: Background trace submission, flush(), and error handling
+---
+
+By default, `runLocal()` automatically sends traces to Tracia in the background. This gives you observability without blocking your application.
+
+## How Tracing Works
+
+1. `runLocal()` completes the LLM call
+2. Returns the result immediately
+3. Submits the trace to Tracia in the background
+4. Retries failed trace submissions automatically
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+
+// Result available immediately
+console.log(result.text);
+console.log(result.traceId); // "tr_1234567890abcdef"
+
+// Trace is being sent in the background
+```
+
+## Trace Metadata
+
+Add metadata to help filter and analyze traces:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  tags: ['production', 'chat', 'v2'],
+  userId: 'user_abc123',
+  sessionId: 'session_xyz789'
+});
+```
+
+### Trace Fields
+
+| Field | Description |
+|-------|-------------|
+| `traceId` | Unique identifier for the trace |
+| `model` | Model used for the request |
+| `provider` | Provider (openai, anthropic, google) |
+| `input.messages` | Messages sent (with variables interpolated) |
+| `variables` | Original variables passed |
+| `output` | Generated response |
+| `status` | SUCCESS or ERROR |
+| `latencyMs` | Request duration |
+| `inputTokens` | Input token count |
+| `outputTokens` | Output token count |
+| `tags` | User-defined tags |
+| `userId` | End user identifier |
+| `sessionId` | Session identifier |
+
+## Custom Trace ID
+
+Provide your own trace ID for correlation with external systems:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  traceId: 'tr_a1b2c3d4e5f67890'
+});
+
+console.log(result.traceId); // "tr_a1b2c3d4e5f67890"
+```
+
+<Warning>
+  Custom trace IDs must match the format: `tr_` followed by exactly 16 hexadecimal characters (e.g., `tr_1234567890abcdef`).
+</Warning>
+
+## Waiting for Traces
+
+Use `flush()` to wait for all pending traces before shutdown:
+
+```typescript
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+// Run multiple requests
+await Promise.all([
+  tracia.runLocal({ model: 'gpt-4o', messages: [{ role: 'user', content: 'Request 1' }] }),
+  tracia.runLocal({ model: 'gpt-4o', messages: [{ role: 'user', content: 'Request 2' }] }),
+  tracia.runLocal({ model: 'gpt-4o', messages: [{ role: 'user', content: 'Request 3' }] }),
+]);
+
+// Wait for all background traces to complete
+await tracia.flush();
+console.log('All traces submitted');
+```
+
+### Graceful Shutdown
+
+```typescript
+process.on('SIGTERM', async () => {
+  console.log('Shutting down...');
+  await tracia.flush();
+  process.exit(0);
+});
+```
+
+## Error Handling
+
+### onTraceError Callback
+
+Handle trace submission failures without affecting your main application:
+
+```typescript
+const tracia = new Tracia({
+  apiKey: process.env.TRACIA_API_KEY,
+  onTraceError: (error, traceId) => {
+    console.error(`Trace ${traceId} failed:`, error.message);
+    // Log to monitoring system, send alert, etc.
+  }
+});
+
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+// LLM response returned even if trace fails
+```
+
+### Retry Behavior
+
+Trace submissions are automatically retried:
+- Up to 2 retry attempts
+- Exponential backoff (500ms, 1000ms)
+- `onTraceError` called only after all retries fail
+
+## Disabling Tracing
+
+Disable tracing for specific requests:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  sendTrace: false
+});
+
+console.log(result.traceId); // "" (empty string)
+```
+
+Use cases for disabling tracing:
+- Development and testing
+- Sensitive data that shouldn't be logged
+- High-volume, low-value requests
+- Reducing costs on non-critical paths
+
+## Viewing Traces
+
+Access traces in the Tracia dashboard or via the SDK:
+
+```typescript
+// Get a specific trace
+const trace = await tracia.traces.get('tr_1234567890abcdef');
+console.log(trace);
+
+// List recent traces
+const { traces } = await tracia.traces.list({
+  tags: ['production'],
+  limit: 10
+});
+```
+
+## Trace Storage
+
+Traces include:
+- Full input messages (after variable interpolation)
+- Original variables (for filtering)
+- Complete output text
+- Token usage and latency
+- LLM configuration (temperature, maxOutputTokens, topP)
+
+<Note>
+  Traces are stored securely and retained according to your plan's data retention policy.
+</Note>

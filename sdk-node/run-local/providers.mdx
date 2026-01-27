@@ -1,0 +1,211 @@
+---
+title: Providers
+description: OpenAI, Anthropic, and Google provider setup and configuration
+---
+
+Tracia supports three LLM providers. Install only the SDKs you need.
+
+## OpenAI
+
+### Installation
+
+```bash
+npm install openai
+```
+
+### Environment Variable
+
+```bash
+OPENAI_API_KEY=sk-your-openai-key
+```
+
+### Usage
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Hello!' }
+  ],
+  temperature: 0.7,
+  maxOutputTokens: 500
+});
+```
+
+### Custom Options
+
+Pass OpenAI-specific parameters via `customOptions`:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a creative story.' }],
+  customOptions: {
+    frequency_penalty: 0.5,
+    presence_penalty: 0.3,
+    logit_bias: { '50256': -100 },
+    seed: 12345
+  }
+});
+```
+
+## Anthropic
+
+### Installation
+
+```bash
+npm install @anthropic-ai/sdk
+```
+
+### Environment Variable
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
+```
+
+### Usage
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'claude-sonnet-4-20250514',
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Explain quantum computing.' }
+  ],
+  temperature: 0.7,
+  maxOutputTokens: 1000
+});
+```
+
+### Custom Options
+
+Pass Anthropic-specific parameters via `customOptions`:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'claude-sonnet-4-20250514',
+  messages: [{ role: 'user', content: 'Analyze this code.' }],
+  customOptions: {
+    metadata: {
+      user_id: 'user_123'
+    }
+  }
+});
+```
+
+## Google
+
+### Installation
+
+```bash
+npm install @google/generative-ai
+```
+
+### Environment Variable
+
+```bash
+GOOGLE_API_KEY=your-google-api-key
+```
+
+### Usage
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gemini-2.0-flash',
+  messages: [
+    { role: 'user', content: 'What are the benefits of TypeScript?' }
+  ],
+  temperature: 0.5,
+  maxOutputTokens: 800
+});
+```
+
+### Custom Options
+
+Pass Google-specific parameters via `customOptions`:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gemini-2.0-flash',
+  messages: [{ role: 'user', content: 'Generate ideas.' }],
+  customOptions: {
+    candidateCount: 1,
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
+    ]
+  }
+});
+```
+
+## Provider Override
+
+The SDK automatically detects the provider based on the model name. For custom or fine-tuned models not in the built-in list, specify the provider explicitly:
+
+```typescript
+// Fine-tuned OpenAI model
+const result = await tracia.runLocal({
+  model: 'ft:gpt-4o:my-org:custom-model:abc123',
+  provider: 'openai',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+```
+
+## API Key Override
+
+Override the environment variable for a specific request:
+
+```typescript
+// Use a different API key
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  providerApiKey: process.env.OPENAI_API_KEY_SECONDARY
+});
+```
+
+This is useful for:
+- Multi-tenant applications with per-customer API keys
+- Testing with different API keys
+- Using organization-specific keys
+
+## Error Handling by Provider
+
+```typescript
+import { Tracia, TraciaError, TraciaErrorCode } from 'tracia';
+
+try {
+  const result = await tracia.runLocal({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  });
+} catch (error) {
+  if (error instanceof TraciaError) {
+    switch (error.code) {
+      case TraciaErrorCode.MISSING_PROVIDER_SDK:
+        console.error('Install the provider SDK: npm install openai');
+        break;
+      case TraciaErrorCode.MISSING_PROVIDER_API_KEY:
+        console.error('Set OPENAI_API_KEY environment variable');
+        break;
+      case TraciaErrorCode.PROVIDER_ERROR:
+        console.error('Provider API error:', error.message);
+        break;
+    }
+  }
+}
+```
+
+## Provider Comparison
+
+| Feature | OpenAI | Anthropic | Google |
+|---------|--------|-----------|--------|
+| System messages | Native support | Native support | Converted internally |
+| Temperature range | 0-2 | 0-1 | 0-2 |
+| Max output tokens | Model-dependent | Model-dependent | Model-dependent |
+| Stop sequences | Supported | Supported | Supported |
+| Streaming | Not yet | Not yet | Not yet |
+
+<Note>
+  Streaming support for `runLocal()` is planned for a future release.
+</Note>

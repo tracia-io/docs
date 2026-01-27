@@ -43,6 +43,7 @@ const tracia = new Tracia({
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
 | `apiKey` | `string` | Yes | Your Tracia API key (starts with `tr_`) |
+| `onTraceError` | `(error: Error, traceId: string) => void` | No | Callback for background trace submission failures |
 
 ### Environment Variables
 
@@ -75,11 +76,21 @@ import {
   UpdatePromptOptions,
   TraciaError,
   TraciaErrorCode,
+  // runLocal types
+  LocalPromptMessage,
+  RunLocalInput,
+  RunLocalResult,
+  LLMProvider,
 } from 'tracia';
 ```
 
 ## Next Steps
 
-<Card title="Prompts SDK" icon="code" href="/sdk-node/prompts">
-  Learn how to run, list, create, update, and delete prompts
-</Card>
+<CardGroup cols={2}>
+  <Card title="Prompts SDK" icon="code" href="/sdk-node/prompts">
+    Manage and run prompts stored in Tracia
+  </Card>
+  <Card title="Run Local" icon="bolt" href="/sdk-node/run-local">
+    Execute prompts directly against LLM providers
+  </Card>
+</CardGroup>

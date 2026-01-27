@@ -1,0 +1,147 @@
+---
+title: Basic Usage
+description: Getting started with runLocal() for each provider
+---
+
+## Prerequisites
+
+Install the Tracia SDK and the provider SDK(s) you need:
+
+<CodeGroup>
+```bash OpenAI
+npm install tracia openai
+```
+
+```bash Anthropic
+npm install tracia @anthropic-ai/sdk
+```
+
+```bash Google
+npm install tracia @google/generative-ai
+```
+
+```bash All Providers
+npm install tracia openai @anthropic-ai/sdk @google/generative-ai
+```
+</CodeGroup>
+
+Set your API keys as environment variables:
+
+```bash .env
+TRACIA_API_KEY=tr_your_tracia_key
+OPENAI_API_KEY=sk-your-openai-key
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
+GOOGLE_API_KEY=your_google_key
+```
+
+## OpenAI
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are a helpful coding assistant.' },
+    { role: 'user', content: 'Write a function to reverse a string in TypeScript.' }
+  ],
+  temperature: 0.7,
+  maxOutputTokens: 500
+});
+
+console.log(result.text);
+console.log(`Tokens used: ${result.usage.totalTokens}`);
+```
+
+## Anthropic
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+const result = await tracia.runLocal({
+  model: 'claude-sonnet-4-20250514',
+  messages: [
+    { role: 'system', content: 'You are a creative writing assistant.' },
+    { role: 'user', content: 'Write a short story opening about a time traveler.' }
+  ],
+  temperature: 0.9,
+  maxOutputTokens: 1000
+});
+
+console.log(result.text);
+console.log(`Provider: ${result.provider}`);
+```
+
+## Google
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+const result = await tracia.runLocal({
+  model: 'gemini-2.0-flash',
+  messages: [
+    { role: 'user', content: 'Explain the difference between HTTP and HTTPS.' }
+  ],
+  temperature: 0.5
+});
+
+console.log(result.text);
+console.log(`Latency: ${result.latencyMs}ms`);
+```
+
+## Multi-Turn Conversations
+
+Include previous messages to maintain conversation context:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are a math tutor.' },
+    { role: 'user', content: 'What is 15% of 80?' },
+    { role: 'assistant', content: '15% of 80 is 12.' },
+    { role: 'user', content: 'How did you calculate that?' }
+  ]
+});
+```
+
+## With Tracing Metadata
+
+Add tags and user identifiers for filtering in the Tracia dashboard:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'Summarize the key points of agile development.' }
+  ],
+  tags: ['production', 'summarization'],
+  userId: 'user_abc123',
+  sessionId: 'session_xyz789'
+});
+
+console.log(`Trace ID: ${result.traceId}`);
+// View this trace in the Tracia dashboard
+```
+
+## Without Tracing
+
+Disable tracing when you don't need observability:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o-mini',
+  messages: [
+    { role: 'user', content: 'What is 2 + 2?' }
+  ],
+  sendTrace: false
+});
+
+console.log(result.traceId); // Empty string
+```

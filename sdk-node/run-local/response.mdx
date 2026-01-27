@@ -1,0 +1,184 @@
+---
+title: Response
+description: RunLocalResult fields and token usage
+---
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+```
+
+## RunLocalResult
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | `string` | The generated text response |
+| `traceId` | `string` | Unique trace identifier (empty if `sendTrace: false`) |
+| `latencyMs` | `number` | Request latency in milliseconds |
+| `usage` | `TokenUsage` | Token usage breakdown |
+| `cost` | `number \| null` | Estimated cost in USD (calculated server-side) |
+| `provider` | `string` | Provider that handled the request |
+| `model` | `string` | Model used for generation |
+
+### TokenUsage
+
+```typescript
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+```
+
+## Accessing Response Fields
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'What is TypeScript?' }
+  ],
+  tags: ['documentation']
+});
+
+// Generated text
+console.log(result.text);
+// "TypeScript is a strongly typed programming language that builds on JavaScript..."
+
+// Trace ID for debugging
+console.log(`Trace ID: ${result.traceId}`);
+// "tr_a1b2c3d4e5f67890"
+
+// Performance metrics
+console.log(`Latency: ${result.latencyMs}ms`);
+// "Latency: 1234ms"
+
+// Token usage
+console.log(`Input tokens: ${result.usage.inputTokens}`);
+console.log(`Output tokens: ${result.usage.outputTokens}`);
+console.log(`Total tokens: ${result.usage.totalTokens}`);
+// "Input tokens: 25"
+// "Output tokens: 150"
+// "Total tokens: 175"
+
+// Provider info
+console.log(`Provider: ${result.provider}`);
+console.log(`Model: ${result.model}`);
+// "Provider: openai"
+// "Model: gpt-4o"
+```
+
+## Cost Tracking
+
+The `cost` field contains the estimated cost in USD, calculated server-side when the trace is processed:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a haiku.' }]
+});
+
+// Cost is available after trace processing
+// Check the Tracia dashboard for accurate cost data
+if (result.cost !== null) {
+  console.log(`Estimated cost: $${result.cost.toFixed(6)}`);
+}
+```
+
+<Note>
+  The `cost` field in the immediate response may be `null`. Accurate cost calculations are available in the Tracia dashboard after trace processing.
+</Note>
+
+## Usage Patterns
+
+### Logging Metrics
+
+```typescript
+async function runWithLogging(messages: LocalPromptMessage[]) {
+  const result = await tracia.runLocal({
+    model: 'gpt-4o',
+    messages,
+    tags: ['monitored']
+  });
+
+  console.log(JSON.stringify({
+    traceId: result.traceId,
+    model: result.model,
+    provider: result.provider,
+    latencyMs: result.latencyMs,
+    inputTokens: result.usage.inputTokens,
+    outputTokens: result.usage.outputTokens,
+    totalTokens: result.usage.totalTokens
+  }));
+
+  return result.text;
+}
+```
+
+### Token Budget Management
+
+```typescript
+const MAX_TOKENS = 10000;
+let totalTokensUsed = 0;
+
+async function runWithBudget(messages: LocalPromptMessage[]) {
+  if (totalTokensUsed >= MAX_TOKENS) {
+    throw new Error('Token budget exceeded');
+  }
+
+  const result = await tracia.runLocal({
+    model: 'gpt-4o',
+    messages,
+    maxOutputTokens: Math.min(500, MAX_TOKENS - totalTokensUsed)
+  });
+
+  totalTokensUsed += result.usage.totalTokens;
+  console.log(`Tokens remaining: ${MAX_TOKENS - totalTokensUsed}`);
+
+  return result;
+}
+```
+
+### Performance Monitoring
+
+```typescript
+const latencies: number[] = [];
+
+async function runWithMonitoring(messages: LocalPromptMessage[]) {
+  const result = await tracia.runLocal({
+    model: 'gpt-4o',
+    messages
+  });
+
+  latencies.push(result.latencyMs);
+
+  const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+  console.log(`Average latency: ${avgLatency.toFixed(0)}ms`);
+
+  return result;
+}
+```
+
+## TypeScript Types
+
+Import the types for type safety:
+
+```typescript
+import { Tracia, RunLocalResult, TokenUsage } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+async function processResult(): Promise<RunLocalResult> {
+  return tracia.runLocal({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  });
+}
+
+function logUsage(usage: TokenUsage): void {
+  console.log(`Tokens: ${usage.totalTokens}`);
+}
+```

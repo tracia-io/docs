@@ -1,0 +1,188 @@
+---
+title: Variables
+description: Template interpolation with double curly brace syntax
+---
+
+Use variables to inject dynamic content into your messages with `{{placeholder}}` syntax.
+
+## Basic Usage
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are a {{role}}.' },
+    { role: 'user', content: 'Help me with {{task}}.' }
+  ],
+  variables: {
+    role: 'helpful coding assistant',
+    task: 'writing a REST API'
+  }
+});
+```
+
+The messages sent to the LLM will be:
+- System: "You are a helpful coding assistant."
+- User: "Help me with writing a REST API."
+
+## Variable Syntax
+
+Variables use double curly braces: `{{variableName}}`
+
+- Variable names must contain only alphanumeric characters and underscores
+- Variables are case-sensitive
+- Undefined variables are left as-is (not replaced)
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'Hello {{name}}, how is {{city}}?' }
+  ],
+  variables: {
+    name: 'Alice'
+    // 'city' is not provided
+  }
+});
+// Result: "Hello Alice, how is {{city}}?"
+```
+
+## Multi-Message Interpolation
+
+Variables are interpolated across all messages:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are an expert in {{language}}.' },
+    { role: 'user', content: 'How do I create a class in {{language}}?' },
+    { role: 'assistant', content: 'In {{language}}, you create a class using...' },
+    { role: 'user', content: 'Can you show me an example in {{language}}?' }
+  ],
+  variables: {
+    language: 'TypeScript'
+  }
+});
+```
+
+## Common Patterns
+
+### Personalized Responses
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'You are helping {{userName}} with their {{projectType}} project.' },
+    { role: 'user', content: '{{userQuestion}}' }
+  ],
+  variables: {
+    userName: 'Alice',
+    projectType: 'e-commerce',
+    userQuestion: 'How should I structure the database?'
+  }
+});
+```
+
+### Dynamic Prompts from Configuration
+
+```typescript
+const promptConfig = {
+  systemPrompt: 'You are a {{tone}} assistant specializing in {{domain}}.',
+  userTemplate: 'Please {{action}} the following: {{content}}'
+};
+
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: promptConfig.systemPrompt },
+    { role: 'user', content: promptConfig.userTemplate }
+  ],
+  variables: {
+    tone: 'friendly',
+    domain: 'web development',
+    action: 'review',
+    content: userInput
+  }
+});
+```
+
+### Locale-Based Content
+
+```typescript
+const translations = {
+  en: { greeting: 'Hello', farewell: 'Goodbye' },
+  es: { greeting: 'Hola', farewell: 'Adiós' },
+  fr: { greeting: 'Bonjour', farewell: 'Au revoir' }
+};
+
+const locale = 'es';
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'system', content: 'Respond using "{{greeting}}" and "{{farewell}}" appropriately.' },
+    { role: 'user', content: 'Greet the user and say bye.' }
+  ],
+  variables: translations[locale]
+});
+```
+
+## Variables vs String Interpolation
+
+You might wonder why use Tracia variables instead of JavaScript template literals. The key difference is **traceability**.
+
+### With Variables (Recommended)
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'Summarize {{topic}} for {{audience}}.' }
+  ],
+  variables: {
+    topic: 'machine learning',
+    audience: 'beginners'
+  }
+});
+// Trace stores: interpolated messages + original variables
+// Variables are preserved for filtering and analysis
+```
+
+### With Template Literals
+
+```typescript
+const topic = 'machine learning';
+const audience = 'beginners';
+
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: `Summarize ${topic} for ${audience}.` }
+  ]
+});
+// Trace stores: only the final string
+// No way to filter by variable values
+```
+
+Using Tracia variables allows you to:
+- Filter traces by variable values in the dashboard
+- Analyze prompt performance across different inputs
+- Group traces by the variables used
+
+## Escaping Curly Braces
+
+If you need literal curly braces in your content, they won't be interpolated if they don't match the `{{word}}` pattern:
+
+```typescript
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'In JavaScript, objects use {key: value} syntax. My name is {{name}}.' }
+  ],
+  variables: { name: 'Alice' }
+});
+// Result: "In JavaScript, objects use {key: value} syntax. My name is Alice."
+```
+
+Single braces and braces with spaces inside are preserved as-is.

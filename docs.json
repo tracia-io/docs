@@ -37,6 +37,20 @@
                 ]
               },
               {
+                "group": "Run Local",
+                "pages": [
+                  "sdk-node/run-local",
+                  "sdk-node/run-local/basic-usage",
+                  "sdk-node/run-local/parameters",
+                  "sdk-node/run-local/response",
+                  "sdk-node/run-local/providers",
+                  "sdk-node/run-local/models",
+                  "sdk-node/run-local/variables",
+                  "sdk-node/run-local/tracing",
+                  "sdk-node/run-local/advanced"
+                ]
+              },
+              {
                 "group": "Traces",
                 "pages": [
                   "sdk-node/traces",

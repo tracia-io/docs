@@ -1,0 +1,110 @@
+---
+title: Evaluate Trace
+openapi: POST /traces/{traceId}/evaluations
+description: Submit an evaluation for a trace
+---
+
+## Request
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token with your API key: `Bearer tr_your_api_key`
+</ParamField>
+
+<ParamField path="traceId" type="string" required>
+  The trace ID to evaluate (e.g., `tr_abc123def456`)
+</ParamField>
+
+<ParamField body="evaluatorKey" type="string" required>
+  The evaluator key. Currently only `quality` is supported.
+</ParamField>
+
+<ParamField body="value" type="number" required>
+  The evaluation score. Use `1` for positive or `0` for negative.
+</ParamField>
+
+<ParamField body="note" type="string">
+  Optional note explaining the evaluation
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique identifier for the evaluation
+</ResponseField>
+
+<ResponseField name="evaluatorKey" type="string">
+  Key of the evaluator used
+</ResponseField>
+
+<ResponseField name="evaluatorName" type="string">
+  Display name of the evaluator
+</ResponseField>
+
+<ResponseField name="value" type="number">
+  The evaluation score
+</ResponseField>
+
+<ResponseField name="source" type="string">
+  Source of the evaluation (e.g., `api`, `dashboard`)
+</ResponseField>
+
+<ResponseField name="note" type="string | null">
+  Optional note explaining the evaluation
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://app.tracia.io/api/v1/traces/tr_abc123def456/evaluations \
+  -H "Authorization: Bearer tr_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "evaluatorKey": "quality",
+    "value": 1,
+    "note": "Response was accurate and helpful"
+  }'
+```
+
+```typescript SDK
+import { Tracia, Eval } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+await tracia.traces.evaluate('tr_abc123def456', {
+  evaluator: 'quality',
+  value: Eval.POSITIVE,
+  note: 'Response was accurate and helpful'
+});
+```
+</RequestExample>
+
+<ResponseExample>
+```json 201
+{
+  "id": "eval_xyz789",
+  "evaluatorKey": "quality",
+  "evaluatorName": "Quality",
+  "value": 1,
+  "source": "api",
+  "note": "Response was accurate and helpful",
+  "createdAt": "2024-01-15T10:35:00.000Z"
+}
+```
+
+```json 400
+{
+  "code": "INVALID_REQUEST",
+  "message": "Invalid evaluation value. Must be a number."
+}
+```
+
+```json 404
+{
+  "code": "NOT_FOUND",
+  "message": "Trace not found: tr_abc123def456"
+}
+```
+</ResponseExample>
