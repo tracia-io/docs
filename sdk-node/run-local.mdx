@@ -178,7 +178,7 @@ interface RunLocalInput {
   topP?: number;
   stopSequences?: string[];
   timeoutMs?: number;
-  customOptions?: Record<string, unknown>;  // Provider-specific options
+  customOptions?: Record<string, Record<string, unknown>>;  // Provider-specific options
 
   // Tool calling
   tools?: ToolDefinition[];

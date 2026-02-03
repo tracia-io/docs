@@ -170,7 +170,7 @@ if (result.finishReason === 'tool_calls') {
 |-----------|------|---------|-------------|
 | `provider` | `'openai' \| 'anthropic' \| 'google'` | Auto-detected | Override provider detection for custom models |
 | `providerApiKey` | `string` | Environment variable | Override the default API key |
-| `customOptions` | `Record<string, unknown>` | `undefined` | Provider-specific options passed to the underlying SDK |
+| `customOptions` | `Record<string, Record<string, unknown>>` | `undefined` | Provider-specific options passed to the AI SDK, namespaced by provider |
 
 ### Provider Override
 
@@ -198,15 +198,15 @@ const result = await tracia.runLocal({
 
 ### Custom Options
 
-Pass provider-specific options that aren't directly supported:
+Pass provider-specific options using a provider-namespaced object. Each key is the provider name, and the value is an object of options passed to the AI SDK:
 
 ```typescript
-// OpenAI: enable JSON mode
+// OpenAI: enable strict JSON schema for tool calls
 const result = await tracia.runLocal({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Return a JSON object with name and age.' }],
   customOptions: {
-    response_format: { type: 'json_object' }
+    openai: { strictJsonSchema: true }
   }
 });
 
@@ -215,10 +215,27 @@ const result = await tracia.runLocal({
   model: 'claude-sonnet-4-20250514',
   messages: [{ role: 'user', content: 'Hello!' }],
   customOptions: {
-    metadata: { user_id: 'user-123' }
+    anthropic: { metadata: { user_id: 'user-123' } }
+  }
+});
+
+// Google: safety settings
+const result = await tracia.runLocal({
+  model: 'gemini-2.0-flash',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  customOptions: {
+    google: {
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' }
+      ]
+    }
   }
 });
 ```
+
+<Note>
+  By default, `openai.strictJsonSchema` is set to `false`, which matches the OpenAI API default. The AI SDK's OpenAI provider defaults to `true`, which can reject tool schemas with open-ended objects. Tracia overrides this to `false` unless you explicitly set it.
+</Note>
 
 ## Variable Interpolation
 
