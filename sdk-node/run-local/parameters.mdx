@@ -170,7 +170,7 @@ if (result.finishReason === 'tool_calls') {
 |-----------|------|---------|-------------|
 | `provider` | `'openai' \| 'anthropic' \| 'google'` | Auto-detected | Override provider detection for custom models |
 | `providerApiKey` | `string` | Environment variable | Override the default API key |
-| `customOptions` | `Record<string, Record<string, unknown>>` | `undefined` | Provider-specific options passed to the AI SDK, namespaced by provider |
+| `customOptions` | `Partial<Record<LLMProvider, Record<string, unknown>>>` | `undefined` | Provider-specific options passed to the AI SDK, namespaced by provider |
 
 ### Provider Override
 

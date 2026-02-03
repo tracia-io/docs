@@ -157,6 +157,16 @@ console.log('Tokens:', result.usage.totalTokens);
 
 ## Types
 
+### LLMProvider
+
+```typescript
+enum LLMProvider {
+  OPENAI = 'openai',
+  ANTHROPIC = 'anthropic',
+  GOOGLE = 'google',
+}
+```
+
 ### RunLocalInput
 
 ```typescript
@@ -178,7 +188,7 @@ interface RunLocalInput {
   topP?: number;
   stopSequences?: string[];
   timeoutMs?: number;
-  customOptions?: Record<string, Record<string, unknown>>;  // Provider-specific options
+  customOptions?: Partial<Record<LLMProvider, Record<string, unknown>>>;  // Provider-specific options
 
   // Tool calling
   tools?: ToolDefinition[];

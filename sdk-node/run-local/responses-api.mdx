@@ -182,7 +182,7 @@ interface RunResponsesInput {
   providerApiKey?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
-  customOptions?: Record<string, Record<string, unknown>>;  // Provider-specific AI SDK options
+  customOptions?: Partial<Record<LLMProvider, Record<string, unknown>>>;  // Provider-specific AI SDK options
   sendTrace?: boolean;
   spanId?: string;         // Custom span ID (sp_ + 16 hex chars)
   traceId?: string;        // Group related spans together (session)
