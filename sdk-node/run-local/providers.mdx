@@ -3,15 +3,23 @@ title: Providers
 description: OpenAI, Anthropic, and Google provider setup and configuration
 ---
 
-Tracia supports three LLM providers. Install only the SDKs you need.
+Tracia uses the [Vercel AI SDK](https://sdk.vercel.ai/docs) under the hood. Install only the providers you need.
 
-## OpenAI
+## Installation
 
-### Installation
+Install the core AI SDK package plus your provider(s):
 
 ```bash
-npm install openai
+# Core package (required)
+npm install ai
+
+# Provider packages (install the ones you need)
+npm install @ai-sdk/openai    # For OpenAI models
+npm install @ai-sdk/anthropic # For Anthropic models
+npm install @ai-sdk/google    # For Google models
 ```
+
+## OpenAI
 
 ### Environment Variable
 
@@ -33,30 +41,21 @@ const result = await tracia.runLocal({
 });
 ```
 
-### Custom Options
-
-Pass OpenAI-specific parameters via `customOptions`:
+### Streaming
 
 ```typescript
-const result = await tracia.runLocal({
+const stream = tracia.runLocal({
   model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Write a creative story.' }],
-  customOptions: {
-    frequency_penalty: 0.5,
-    presence_penalty: 0.3,
-    logit_bias: { '50256': -100 },
-    seed: 12345
-  }
+  messages: [{ role: 'user', content: 'Write a poem.' }],
+  stream: true,
 });
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
 ```
 
 ## Anthropic
-
-### Installation
-
-```bash
-npm install @anthropic-ai/sdk
-```
 
 ### Environment Variable
 
@@ -78,29 +77,21 @@ const result = await tracia.runLocal({
 });
 ```
 
-### Custom Options
-
-Pass Anthropic-specific parameters via `customOptions`:
+### Streaming
 
 ```typescript
-const result = await tracia.runLocal({
+const stream = tracia.runLocal({
   model: 'claude-sonnet-4-20250514',
-  messages: [{ role: 'user', content: 'Analyze this code.' }],
-  customOptions: {
-    metadata: {
-      user_id: 'user_123'
-    }
-  }
+  messages: [{ role: 'user', content: 'Write a story.' }],
+  stream: true,
 });
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
 ```
 
 ## Google
-
-### Installation
-
-```bash
-npm install @google/generative-ai
-```
 
 ### Environment Variable
 
@@ -121,21 +112,18 @@ const result = await tracia.runLocal({
 });
 ```
 
-### Custom Options
-
-Pass Google-specific parameters via `customOptions`:
+### Streaming
 
 ```typescript
-const result = await tracia.runLocal({
+const stream = tracia.runLocal({
   model: 'gemini-2.0-flash',
-  messages: [{ role: 'user', content: 'Generate ideas.' }],
-  customOptions: {
-    candidateCount: 1,
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
-    ]
-  }
+  messages: [{ role: 'user', content: 'Explain machine learning.' }],
+  stream: true,
 });
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
 ```
 
 ## Provider Override
@@ -183,7 +171,8 @@ try {
   if (error instanceof TraciaError) {
     switch (error.code) {
       case TraciaErrorCode.MISSING_PROVIDER_SDK:
-        console.error('Install the provider SDK: npm install openai');
+        // Missing ai package or provider package
+        console.error('Install required packages: npm install ai @ai-sdk/openai');
         break;
       case TraciaErrorCode.MISSING_PROVIDER_API_KEY:
         console.error('Set OPENAI_API_KEY environment variable');
@@ -204,8 +193,5 @@ try {
 | Temperature range | 0-2 | 0-1 | 0-2 |
 | Max output tokens | Model-dependent | Model-dependent | Model-dependent |
 | Stop sequences | Supported | Supported | Supported |
-| Streaming | Not yet | Not yet | Not yet |
-
-<Note>
-  Streaming support for `runLocal()` is planned for a future release.
-</Note>
+| Streaming | Supported | Supported | Supported |
+| Tool calling | Supported | Supported | Supported |

@@ -292,11 +292,11 @@ import { Tracia, RunLocalResult } from 'tracia';
 
 const tracia = new Tracia({
   apiKey: process.env.TRACIA_API_KEY,
-  onTraceError: (error, traceId) => {
+  onSpanError: (error, spanId) => {
     console.error(JSON.stringify({
       level: 'error',
-      type: 'trace_submission_failed',
-      traceId,
+      type: 'span_submission_failed',
+      spanId,
       error: error.message,
       timestamp: new Date().toISOString()
     }));
@@ -312,7 +312,7 @@ async function runWithLogging(input: RunLocalInput): Promise<RunLocalResult> {
     console.log(JSON.stringify({
       level: 'info',
       type: 'llm_request',
-      traceId: result.traceId,
+      spanId: result.spanId,
       model: result.model,
       provider: result.provider,
       latencyMs: result.latencyMs,

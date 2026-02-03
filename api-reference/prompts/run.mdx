@@ -4,7 +4,7 @@ openapi: POST /prompts/{slug}/run
 description: Execute a prompt and get the LLM response
 ---
 
-Run a prompt with variable substitution and get the generated response. This endpoint handles template rendering, LLM API calls, and automatically logs a trace.
+Run a prompt with variable substitution and get the generated response. This endpoint handles template rendering, LLM API calls, and automatically logs a span.
 
 ## Request
 
@@ -21,11 +21,11 @@ Run a prompt with variable substitution and get the generated response. This end
 </ParamField>
 
 <ParamField body="model" type="string">
-  Override the default model (e.g., `gpt-4`, `claude-3-opus-20240229`)
+  Override the default model (e.g., `gpt-4o`, `claude-sonnet-4-20250514`)
 </ParamField>
 
 <ParamField body="tags" type="string[]">
-  Tags for filtering traces in the dashboard
+  Tags for filtering spans in the dashboard
 </ParamField>
 
 <ParamField body="userId" type="string">
@@ -33,7 +33,15 @@ Run a prompt with variable substitution and get the generated response. This end
 </ParamField>
 
 <ParamField body="sessionId" type="string">
-  Session identifier for grouping related traces
+  Session identifier for grouping related spans
+</ParamField>
+
+<ParamField body="traceId" type="string">
+  Group related spans together (session ID for multi-turn conversations)
+</ParamField>
+
+<ParamField body="parentSpanId" type="string">
+  Link to parent span (creates a chain)
 </ParamField>
 
 ## Response
@@ -42,8 +50,12 @@ Run a prompt with variable substitution and get the generated response. This end
   The generated text from the LLM
 </ResponseField>
 
+<ResponseField name="spanId" type="string">
+  Unique identifier for this span
+</ResponseField>
+
 <ResponseField name="traceId" type="string">
-  Unique identifier for this trace (use to look up in dashboard)
+  Session identifier (same as spanId if not part of session)
 </ResponseField>
 
 <ResponseField name="promptVersion" type="number">
@@ -103,7 +115,8 @@ const result = await tracia.prompts.run('welcome-email', {
 ```json 200
 {
   "text": "Dear Alice,\n\nWelcome to Tracia! We're thrilled to have you join our community...",
-  "traceId": "tr_abc123xyz",
+  "spanId": "sp_abc123xyz",
+  "traceId": "tr_session789",
   "promptVersion": 3,
   "latencyMs": 1250,
   "usage": {
@@ -117,29 +130,37 @@ const result = await tracia.prompts.run('welcome-email', {
 
 ```json 400 Missing Variables
 {
-  "code": "MISSING_VARIABLES",
-  "message": "Missing required variables: product"
+  "error": {
+    "code": "MISSING_VARIABLES",
+    "message": "Missing required variables: product"
+  }
 }
 ```
 
 ```json 400 No Provider Key
 {
-  "code": "MISSING_PROVIDER_KEY",
-  "message": "No OpenAI API key configured. Add one in Settings > Providers."
+  "error": {
+    "code": "MISSING_PROVIDER_KEY",
+    "message": "No OpenAI API key configured. Add one in Settings > Providers."
+  }
 }
 ```
 
 ```json 404
 {
-  "code": "NOT_FOUND",
-  "message": "Prompt not found: welcome-email"
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Prompt not found: welcome-email"
+  }
 }
 ```
 
 ```json 500 Provider Error
 {
-  "code": "PROVIDER_ERROR",
-  "message": "OpenAI error: Rate limit exceeded"
+  "error": {
+    "code": "PROVIDER_ERROR",
+    "message": "OpenAI error: Rate limit exceeded"
+  }
 }
 ```
 </ResponseExample>

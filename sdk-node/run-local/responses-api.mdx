@@ -1,0 +1,228 @@
+---
+title: Responses API
+description: OpenAI reasoning models with the Responses API
+---
+
+The `runResponses()` method provides access to OpenAI's Responses API, designed for reasoning models like o1 and o3-mini.
+
+<Note>
+  The Responses API is OpenAI-specific and uses a different input format than `runLocal()`.
+</Note>
+
+## When to Use Responses API
+
+Use `runResponses()` when working with:
+- **Reasoning models** (o1, o3-mini, o4-mini) that benefit from the Responses API format
+- **Multi-turn conversations** where you want to pass output items back as input
+- **Structured reasoning** where you want to capture reasoning summaries
+
+For standard chat completions, use `runLocal()` instead.
+
+## Basic Usage
+
+```typescript
+const result = await tracia.runResponses({
+  model: 'o3-mini',
+  input: [
+    { role: 'developer', content: 'You are a helpful math tutor.' },
+    { role: 'user', content: 'What is the derivative of x^3?' },
+  ],
+});
+
+console.log(result.text);
+```
+
+## Input Format
+
+The Responses API uses different roles than the Chat API:
+
+| Responses API | Chat API Equivalent |
+|--------------|---------------------|
+| `developer` | `system` |
+| `user` | `user` |
+| `function_call_output` | `tool` |
+
+```typescript
+type ResponsesInputItem =
+  | { role: 'developer' | 'user'; content: string }
+  | { type: 'function_call_output'; call_id: string; output: string }
+  | ResponsesOutputItem; // Previous output items for multi-turn
+```
+
+## Streaming
+
+Enable streaming to receive responses in real-time:
+
+```typescript
+const stream = tracia.runResponses({
+  model: 'o3-mini',
+  input: [
+    { role: 'developer', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Explain quantum entanglement.' },
+  ],
+  stream: true,
+});
+
+for await (const event of stream) {
+  switch (event.type) {
+    case 'text_delta':
+      process.stdout.write(event.data);
+      break;
+    case 'reasoning':
+      console.log('\n[Reasoning]:', event.content);
+      break;
+    case 'tool_call':
+      console.log('\n[Tool]:', event.name, event.arguments);
+      break;
+    case 'done':
+      console.log('\n[Done] Tokens:', event.usage.totalTokens);
+      break;
+  }
+}
+
+const result = await stream.result;
+console.log('Output items:', result.outputItems);
+```
+
+## Event Types
+
+When streaming, you receive different event types:
+
+```typescript
+type ResponsesEvent =
+  | { type: 'text_delta'; data: string }     // Incremental text chunk
+  | { type: 'text'; data: string }           // Complete text (at end)
+  | { type: 'reasoning'; content: string }   // Reasoning summary
+  | { type: 'tool_call'; id: string; callId: string; name: string; arguments: Record<string, unknown> }
+  | { type: 'done'; usage: TokenUsage }      // Stream complete
+```
+
+## Multi-Turn Conversations
+
+Pass previous output items back as input for multi-turn conversations:
+
+```typescript
+// First turn
+const first = await tracia.runResponses({
+  model: 'o3-mini',
+  input: [
+    { role: 'developer', content: 'You are a math tutor.' },
+    { role: 'user', content: 'What is 2 + 2?' },
+  ],
+});
+
+console.log('First:', first.text);
+
+// Second turn - include previous output items
+const second = await tracia.runResponses({
+  model: 'o3-mini',
+  input: [
+    { role: 'developer', content: 'You are a math tutor.' },
+    { role: 'user', content: 'What is 2 + 2?' },
+    ...first.outputItems,  // Include previous response
+    { role: 'user', content: 'Now multiply that by 3.' },
+  ],
+});
+
+console.log('Second:', second.text);
+```
+
+## Tool Calling
+
+The Responses API supports function calling:
+
+```typescript
+const result = await tracia.runResponses({
+  model: 'o3-mini',
+  input: [
+    { role: 'developer', content: 'You help users with calculations.' },
+    { role: 'user', content: 'Calculate 15% tip on $85.50' },
+  ],
+  tools: [{
+    name: 'calculate',
+    description: 'Perform a calculation',
+    parameters: {
+      type: 'object',
+      properties: {
+        expression: { type: 'string', description: 'Math expression to evaluate' }
+      },
+      required: ['expression']
+    }
+  }],
+});
+
+if (result.toolCalls.length > 0) {
+  const toolCall = result.toolCalls[0];
+  console.log('Calculate:', toolCall.arguments.expression);
+
+  // Continue with tool result
+  const followUp = await tracia.runResponses({
+    model: 'o3-mini',
+    input: [
+      { role: 'developer', content: 'You help users with calculations.' },
+      { role: 'user', content: 'Calculate 15% tip on $85.50' },
+      ...result.outputItems,
+      { type: 'function_call_output', call_id: toolCall.callId, output: '12.825' },
+    ],
+  });
+
+  console.log('Result:', followUp.text);
+}
+```
+
+## RunResponsesInput
+
+```typescript
+interface RunResponsesInput {
+  model: string;
+  input: ResponsesInputItem[];
+  stream?: boolean;
+  tools?: ToolDefinition[];
+  maxOutputTokens?: number;
+  providerApiKey?: string;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  sendTrace?: boolean;
+  spanId?: string;         // Custom span ID (sp_ + 16 hex chars)
+  traceId?: string;        // Group related spans together (session)
+  parentSpanId?: string;   // Link to parent span
+  tags?: string[];
+  userId?: string;
+  sessionId?: string;
+}
+```
+
+## RunResponsesResult
+
+```typescript
+interface RunResponsesResult {
+  text: string;
+  spanId: string;           // Unique ID for this span
+  traceId: string | null;   // Session ID if part of multi-turn conversation
+  latencyMs: number;
+  usage: TokenUsage;
+  outputItems: ResponsesOutputItem[];  // For multi-turn
+  toolCalls: Array<{
+    id: string;
+    callId: string;
+    name: string;
+    arguments: Record<string, unknown>;
+  }>;
+  aborted: boolean;
+}
+```
+
+## Supported Models
+
+The Responses API works with OpenAI's reasoning models:
+
+| Model | Description |
+|-------|-------------|
+| `o1` | Full reasoning model |
+| `o1-mini` | Smaller, faster reasoning |
+| `o3-mini` | Latest compact reasoning model |
+| `o4-mini` | Next-generation compact reasoning |
+
+<Note>
+  Standard models like `gpt-4o` can also be used with the Responses API, but `runLocal()` is recommended for those.
+</Note>

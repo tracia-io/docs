@@ -7,7 +7,7 @@ description: Execute a prompt and get the LLM response
 const result = await tracia.prompts.run(slug, variables?, options?);
 ```
 
-Execute a prompt with variable substitution and get the generated response. Tracia handles template rendering, LLM API calls, and automatically logs a trace.
+Execute a prompt with variable substitution and get the generated response. Tracia handles template rendering, LLM API calls, and automatically logs a span.
 
 ## Parameters
 
@@ -16,16 +16,19 @@ Execute a prompt with variable substitution and get the generated response. Trac
 | `slug` | `string` | Yes | The prompt slug |
 | `variables` | `Record<string, string>` | No | Template variables |
 | `options.model` | `string` | No | Override the default model |
-| `options.tags` | `string[]` | No | Tags for filtering traces |
+| `options.tags` | `string[]` | No | Tags for filtering spans |
 | `options.userId` | `string` | No | End user identifier |
 | `options.sessionId` | `string` | No | Session identifier |
+| `options.traceId` | `string` | No | Group related spans together (session) |
+| `options.parentSpanId` | `string` | No | Link to parent span |
 
 ## Response
 
 ```typescript
 interface RunResult {
   text: string;           // The generated text
-  traceId: string;        // Unique trace identifier
+  spanId: string;         // Unique span identifier
+  traceId: string;        // Session ID (same as spanId if not part of session)
   promptVersion: number;  // Version of the prompt used
   latencyMs: number;      // Request latency in milliseconds
   usage: {
@@ -74,7 +77,7 @@ const result = await tracia.prompts.run('welcome-email', { name: 'Alice' });
 console.log(`Latency: ${result.latencyMs}ms`);
 console.log(`Tokens: ${result.usage.totalTokens}`);
 console.log(`Cost: $${result.cost.toFixed(4)}`);
-console.log(`Trace ID: ${result.traceId}`);
+console.log(`Span ID: ${result.spanId}`);
 console.log(`Prompt Version: ${result.promptVersion}`);
 ```
 

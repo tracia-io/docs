@@ -43,7 +43,7 @@ const tracia = new Tracia({
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
 | `apiKey` | `string` | Yes | Your Tracia API key (starts with `tr_`) |
-| `onTraceError` | `(error: Error, traceId: string) => void` | No | Callback for background trace submission failures |
+| `onSpanError` | `(error: Error, spanId: string) => void` | No | Callback for background span submission failures |
 
 ### Environment Variables
 
@@ -65,6 +65,7 @@ The SDK is written in TypeScript and exports all types:
 import {
   Tracia,
   TraciaOptions,
+  TraciaSession,
   RunOptions,
   RunResult,
   TokenUsage,
@@ -80,7 +81,18 @@ import {
   LocalPromptMessage,
   RunLocalInput,
   RunLocalResult,
+  LocalStream,
   LLMProvider,
+  // Span types
+  Span,
+  SpanListItem,
+  SpanStatus,
+  ListSpansOptions,
+  ListSpansResult,
+  // Tool types
+  ToolDefinition,
+  ToolCall,
+  ToolChoice,
 } from 'tracia';
 ```
 

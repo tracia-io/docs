@@ -1,19 +1,19 @@
 ---
-title: Evaluate Trace
-description: Submit evaluations for traces
+title: Evaluate Span
+description: Submit evaluations for spans
 ---
 
 ```typescript
-const evaluation = await tracia.traces.evaluate(traceId, options);
+const evaluation = await tracia.spans.evaluate(spanId, options);
 ```
 
-Submit an evaluation for a trace. Evaluations allow you to score traces, providing feedback on response quality.
+Submit an evaluation for a span. Evaluations allow you to score spans, providing feedback on response quality.
 
 ## Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `traceId` | `string` | Yes | The trace ID to evaluate |
+| `spanId` | `string` | Yes | The span ID to evaluate |
 | `options.evaluator` | `string` | Yes | The evaluator key. Currently only `quality` is supported. |
 | `options.value` | `number` | Yes | The evaluation score. Use `Eval.POSITIVE` (1) or `Eval.NEGATIVE` (0) |
 | `options.note` | `string` | No | Optional note explaining the evaluation |
@@ -42,13 +42,13 @@ import { Tracia, Eval } from 'tracia';
 const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
 
 // Positive evaluation
-await tracia.traces.evaluate('tr_abc123def456', {
+await tracia.spans.evaluate('sp_abc123def456', {
   evaluator: 'quality',
   value: Eval.POSITIVE
 });
 
 // Negative evaluation
-await tracia.traces.evaluate('tr_abc123def456', {
+await tracia.spans.evaluate('sp_abc123def456', {
   evaluator: 'quality',
   value: Eval.NEGATIVE
 });
@@ -57,7 +57,7 @@ await tracia.traces.evaluate('tr_abc123def456', {
 ### Adding a Note
 
 ```typescript
-await tracia.traces.evaluate('tr_abc123def456', {
+await tracia.spans.evaluate('sp_abc123def456', {
   evaluator: 'quality',
   value: Eval.NEGATIVE,
   note: 'Response was off-topic and did not address the user question'
@@ -68,8 +68,8 @@ await tracia.traces.evaluate('tr_abc123def456', {
 
 ```typescript
 // Capture user feedback from your application
-async function submitUserFeedback(traceId: string, isHelpful: boolean, comment?: string) {
-  await tracia.traces.evaluate(traceId, {
+async function submitUserFeedback(spanId: string, isHelpful: boolean, comment?: string) {
+  await tracia.spans.evaluate(spanId, {
     evaluator: 'quality',
     value: isHelpful ? Eval.POSITIVE : Eval.NEGATIVE,
     note: comment
@@ -83,14 +83,14 @@ async function submitUserFeedback(traceId: string, isHelpful: boolean, comment?:
 import { Tracia, TraciaError, TraciaErrorCode, Eval } from 'tracia';
 
 try {
-  await tracia.traces.evaluate('tr_abc123def456', {
+  await tracia.spans.evaluate('sp_abc123def456', {
     evaluator: 'quality',
     value: Eval.POSITIVE
   });
 } catch (error) {
   if (error instanceof TraciaError) {
     if (error.code === TraciaErrorCode.NOT_FOUND) {
-      console.error('Trace not found');
+      console.error('Span not found');
     } else if (error.code === TraciaErrorCode.INVALID_REQUEST) {
       console.error('Invalid evaluation value');
     }

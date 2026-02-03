@@ -100,6 +100,21 @@ const result = await tracia.runLocal({
   ]
 });
 ```
+
+```typescript Streaming
+const stream = tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a poem' }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
+
+const result = await stream.result;
+console.log('Tokens:', result.usage.totalTokens);
+```
 </CodeGroup>
 
 ## Available Methods
@@ -107,6 +122,12 @@ const result = await tracia.runLocal({
 <CardGroup cols={2}>
   <Card title="Basic Usage" icon="play" href="/sdk-node/run-local/basic-usage">
     Getting started with each provider
+  </Card>
+  <Card title="Streaming" icon="bolt" href="/sdk-node/run-local/streaming">
+    Real-time streaming responses
+  </Card>
+  <Card title="Sessions" icon="link" href="/sdk-node/run-local/sessions">
+    Automatic trace chaining for multi-turn
   </Card>
   <Card title="Parameters" icon="sliders" href="/sdk-node/run-local/parameters">
     Complete RunLocalInput reference
@@ -126,6 +147,9 @@ const result = await tracia.runLocal({
   <Card title="Tracing" icon="chart-line" href="/sdk-node/run-local/tracing">
     Background traces, flush(), error handling
   </Card>
+  <Card title="Responses API" icon="brain" href="/sdk-node/run-local/responses-api">
+    OpenAI reasoning models (o1, o3-mini)
+  </Card>
   <Card title="Advanced" icon="gear" href="/sdk-node/run-local/advanced">
     Error handling, concurrent requests
   </Card>
@@ -141,6 +165,10 @@ interface RunLocalInput {
   messages: LocalPromptMessage[];
   model: string;
 
+  // Streaming
+  stream?: boolean;     // When true, returns LocalStream instead of Promise
+  signal?: AbortSignal; // Cancel the request (streaming only)
+
   // Provider override (for custom/new models)
   provider?: 'openai' | 'anthropic' | 'google';
 
@@ -150,7 +178,11 @@ interface RunLocalInput {
   topP?: number;
   stopSequences?: string[];
   timeoutMs?: number;
-  customOptions?: Record<string, unknown>;
+  customOptions?: Record<string, unknown>;  // Provider-specific options
+
+  // Tool calling
+  tools?: ToolDefinition[];
+  toolChoice?: ToolChoice;
 
   // Variable interpolation
   variables?: Record<string, string>;
@@ -158,12 +190,14 @@ interface RunLocalInput {
   // Provider API key override
   providerApiKey?: string;
 
-  // Tracing options
+  // Span options
   tags?: string[];
   userId?: string;
   sessionId?: string;
-  sendTrace?: boolean;  // default: true
-  traceId?: string;     // custom trace ID
+  sendTrace?: boolean;  // default: true (sends span to Tracia)
+  spanId?: string;      // custom span ID (sp_ + 16 hex chars)
+  traceId?: string;     // group related spans together (session)
+  parentSpanId?: string;  // link to parent span
 }
 ```
 
@@ -172,7 +206,8 @@ interface RunLocalInput {
 ```typescript
 interface RunLocalResult {
   text: string;
-  traceId: string;
+  spanId: string;         // Unique ID for this span
+  traceId: string | null; // Session ID if part of multi-turn conversation
   latencyMs: number;
   usage: {
     inputTokens: number;
@@ -182,6 +217,32 @@ interface RunLocalResult {
   cost: number | null;
   provider: 'openai' | 'anthropic' | 'google';
   model: string;
+  toolCalls: ToolCall[];
+  finishReason: 'stop' | 'max_tokens' | 'tool_calls';
+  message: LocalPromptMessage;  // For easy round-tripping in multi-turn
+}
+```
+
+### LocalStream
+
+When `stream: true` is set, `runLocal()` returns a `LocalStream`:
+
+```typescript
+interface LocalStream {
+  // Span ID available immediately
+  readonly spanId: string;
+
+  // Trace ID (session) if provided
+  readonly traceId: string | null;
+
+  // Iterate to receive text chunks
+  [Symbol.asyncIterator](): AsyncIterator<string>;
+
+  // Final result after stream completes
+  readonly result: Promise<StreamResult>;
+
+  // Cancel the stream
+  abort(): void;
 }
 ```
 
@@ -189,11 +250,24 @@ interface RunLocalResult {
 
 ```typescript
 interface LocalPromptMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | ContentPart[];
+  toolCallId?: string;  // Required for 'tool' role
+  toolName?: string;    // Required for 'tool' role
+}
+
+// Content parts for assistant messages with tool calls
+type ContentPart = TextPart | ToolCallPart;
+
+interface TextPart {
+  type: 'text';
+  text: string;
+}
+
+interface ToolCallPart {
+  type: 'tool_call';
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
 }
 ```
-
-<Note>
-  Unlike `PromptMessage` used with stored prompts, `LocalPromptMessage` does not have an `id` field since messages are defined inline.
-</Note>

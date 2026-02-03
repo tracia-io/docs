@@ -15,12 +15,16 @@ const result = await tracia.runLocal({
 | Field | Type | Description |
 |-------|------|-------------|
 | `text` | `string` | The generated text response |
-| `traceId` | `string` | Unique trace identifier (empty if `sendTrace: false`) |
+| `spanId` | `string` | Unique span identifier (empty if `sendTrace: false`) |
+| `traceId` | `string \| null` | Session identifier if part of multi-turn conversation |
 | `latencyMs` | `number` | Request latency in milliseconds |
 | `usage` | `TokenUsage` | Token usage breakdown |
 | `cost` | `number \| null` | Estimated cost in USD (calculated server-side) |
 | `provider` | `string` | Provider that handled the request |
 | `model` | `string` | Model used for generation |
+| `toolCalls` | `ToolCall[]` | Tool calls made by the model |
+| `finishReason` | `FinishReason` | Why the model stopped generating |
+| `message` | `LocalPromptMessage` | Full assistant message for multi-turn conversations |
 
 ### TokenUsage
 
@@ -31,6 +35,26 @@ interface TokenUsage {
   totalTokens: number;
 }
 ```
+
+### ToolCall
+
+```typescript
+interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+```
+
+### FinishReason
+
+```typescript
+type FinishReason = 'stop' | 'max_tokens' | 'tool_calls';
+```
+
+- `stop` - Model finished naturally
+- `max_tokens` - Hit the token limit
+- `tool_calls` - Model wants to call a tool
 
 ## Accessing Response Fields
 
@@ -48,9 +72,9 @@ const result = await tracia.runLocal({
 console.log(result.text);
 // "TypeScript is a strongly typed programming language that builds on JavaScript..."
 
-// Trace ID for debugging
-console.log(`Trace ID: ${result.traceId}`);
-// "tr_a1b2c3d4e5f67890"
+// Span ID for debugging
+console.log(`Span ID: ${result.spanId}`);
+// "sp_a1b2c3d4e5f67890"
 
 // Performance metrics
 console.log(`Latency: ${result.latencyMs}ms`);
@@ -73,7 +97,7 @@ console.log(`Model: ${result.model}`);
 
 ## Cost Tracking
 
-The `cost` field contains the estimated cost in USD, calculated server-side when the trace is processed:
+The `cost` field contains the estimated cost in USD, calculated server-side when the span is processed:
 
 ```typescript
 const result = await tracia.runLocal({
@@ -81,7 +105,7 @@ const result = await tracia.runLocal({
   messages: [{ role: 'user', content: 'Write a haiku.' }]
 });
 
-// Cost is available after trace processing
+// Cost is available after span processing
 // Check the Tracia dashboard for accurate cost data
 if (result.cost !== null) {
   console.log(`Estimated cost: $${result.cost.toFixed(6)}`);
@@ -89,7 +113,7 @@ if (result.cost !== null) {
 ```
 
 <Note>
-  The `cost` field in the immediate response may be `null`. Accurate cost calculations are available in the Tracia dashboard after trace processing.
+  The `cost` field in the immediate response may be `null`. Accurate cost calculations are available in the Tracia dashboard after span processing.
 </Note>
 
 ## Usage Patterns
@@ -105,7 +129,7 @@ async function runWithLogging(messages: LocalPromptMessage[]) {
   });
 
   console.log(JSON.stringify({
-    traceId: result.traceId,
+    spanId: result.spanId,
     model: result.model,
     provider: result.provider,
     latencyMs: result.latencyMs,

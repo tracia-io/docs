@@ -5,23 +5,23 @@ description: Getting started with runLocal() for each provider
 
 ## Prerequisites
 
-Install the Tracia SDK and the provider SDK(s) you need:
+Install the Tracia SDK, the Vercel AI SDK, and the provider package(s) you need:
 
 <CodeGroup>
 ```bash OpenAI
-npm install tracia openai
+npm install tracia ai @ai-sdk/openai
 ```
 
 ```bash Anthropic
-npm install tracia @anthropic-ai/sdk
+npm install tracia ai @ai-sdk/anthropic
 ```
 
 ```bash Google
-npm install tracia @google/generative-ai
+npm install tracia ai @ai-sdk/google
 ```
 
 ```bash All Providers
-npm install tracia openai @anthropic-ai/sdk @google/generative-ai
+npm install tracia ai @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google
 ```
 </CodeGroup>
 
@@ -126,9 +126,37 @@ const result = await tracia.runLocal({
   sessionId: 'session_xyz789'
 });
 
-console.log(`Trace ID: ${result.traceId}`);
-// View this trace in the Tracia dashboard
+console.log(`Span ID: ${result.spanId}`);
+// View this span in the Tracia dashboard
 ```
+
+## Streaming
+
+Enable streaming to receive responses in real-time:
+
+```typescript
+const stream = tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'Write a short poem about coding.' }
+  ],
+  stream: true,
+});
+
+// Span ID is available immediately
+console.log(`Span: ${stream.spanId}`);
+
+// Iterate to receive chunks
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
+
+// Get final result with usage stats
+const result = await stream.result;
+console.log(`\nTokens: ${result.usage.totalTokens}`);
+```
+
+See [Streaming](/sdk-node/run-local/streaming) for more details.
 
 ## Without Tracing
 
@@ -143,5 +171,5 @@ const result = await tracia.runLocal({
   sendTrace: false
 });
 
-console.log(result.traceId); // Empty string
+console.log(result.spanId); // Empty string
 ```

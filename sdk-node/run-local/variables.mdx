@@ -145,7 +145,7 @@ const result = await tracia.runLocal({
     audience: 'beginners'
   }
 });
-// Trace stores: interpolated messages + original variables
+// Span stores: interpolated messages + original variables
 // Variables are preserved for filtering and analysis
 ```
 
@@ -161,14 +161,14 @@ const result = await tracia.runLocal({
     { role: 'user', content: `Summarize ${topic} for ${audience}.` }
   ]
 });
-// Trace stores: only the final string
+// Span stores: only the final string
 // No way to filter by variable values
 ```
 
 Using Tracia variables allows you to:
-- Filter traces by variable values in the dashboard
+- Filter spans by variable values in the dashboard
 - Analyze prompt performance across different inputs
-- Group traces by the variables used
+- Group spans by the variables used
 
 ## Escaping Curly Braces
 

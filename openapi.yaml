@@ -129,24 +129,34 @@ components:
         updatedAt:
           type: string
           format: date-time
-    Trace:
+    Span:
       type: object
       properties:
         id:
           type: string
           description: Internal identifier
+        spanId:
+          type: string
+          description: External span ID (e.g., `sp_abc123`)
         traceId:
           type: string
-          description: External trace ID (e.g., `tr_abc123`)
+          nullable: true
+          description: Session/trace ID for multi-turn conversations
+        parentSpanId:
+          type: string
+          nullable: true
+          description: Parent span ID for chained conversations
         promptSlug:
           type: string
-          description: Slug of the prompt that was run
+          nullable: true
+          description: Slug of the prompt that was run (null for runLocal spans)
         promptVersion:
           type: integer
+          nullable: true
           description: Version of the prompt used
         model:
           type: string
-          description: Model used (e.g., `gpt-4`)
+          description: Model used (e.g., `gpt-4o`)
         provider:
           type: string
           description: Provider name (e.g., `openai`)
@@ -205,15 +215,19 @@ components:
         createdAt:
           type: string
           format: date-time
-    TraceSummary:
+    SpanSummary:
       type: object
       properties:
         id:
           type: string
+        spanId:
+          type: string
         traceId:
           type: string
+          nullable: true
         promptSlug:
           type: string
+          nullable: true
         model:
           type: string
         status:
@@ -236,12 +250,15 @@ components:
     Error:
       type: object
       properties:
-        code:
-          type: string
-          description: Error code
-        message:
-          type: string
-          description: Error message
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+            message:
+              type: string
+              description: Error message
     Evaluation:
       type: object
       properties:
@@ -479,18 +496,24 @@ paths:
                   description: Key-value pairs for template variables
                 model:
                   type: string
-                  description: Override the default model (e.g., `gpt-4`, `claude-3-opus-20240229`)
+                  description: Override the default model (e.g., `gpt-4o`, `claude-sonnet-4-20250514`)
                 tags:
                   type: array
                   items:
                     type: string
-                  description: Tags for filtering traces in the dashboard
+                  description: Tags for filtering spans in the dashboard
                 userId:
                   type: string
                   description: End user identifier for tracking
                 sessionId:
                   type: string
-                  description: Session identifier for grouping related traces
+                  description: Session identifier for grouping related spans
+                traceId:
+                  type: string
+                  description: Group related spans together (session ID for multi-turn conversations)
+                parentSpanId:
+                  type: string
+                  description: Link to parent span (creates a chain)
       responses:
         '200':
           description: Successful response
@@ -502,9 +525,12 @@ paths:
                   text:
                     type: string
                     description: The generated text from the LLM
+                  spanId:
+                    type: string
+                    description: Unique identifier for this span
                   traceId:
                     type: string
-                    description: Unique identifier for this trace
+                    description: Session identifier (same as spanId if not part of session)
                   promptVersion:
                     type: integer
                     description: Version of the prompt that was used
@@ -541,13 +567,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /traces:
+  /spans:
     get:
-      operationId: listTraces
-      summary: List Traces
-      description: Get traces with optional filters and pagination
+      operationId: listSpans
+      summary: List Spans
+      description: Get spans with optional filters and pagination
       tags:
-        - Traces
+        - Spans
       parameters:
         - name: promptSlug
           in: query
@@ -565,13 +591,13 @@ paths:
           schema:
             type: string
             format: date-time
-          description: Filter traces created after this ISO 8601 date
+          description: Filter spans created after this ISO 8601 date
         - name: endDate
           in: query
           schema:
             type: string
             format: date-time
-          description: Filter traces created before this ISO 8601 date
+          description: Filter spans created before this ISO 8601 date
         - name: userId
           in: query
           schema:
@@ -607,10 +633,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  traces:
+                  spans:
                     type: array
                     items:
-                      $ref: '#/components/schemas/TraceSummary'
+                      $ref: '#/components/schemas/SpanSummary'
                   nextCursor:
                     type: string
                     nullable: true
@@ -621,47 +647,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /traces/{traceId}:
+  /spans/{spanId}:
     get:
-      operationId: getTrace
-      summary: Get Trace
-      description: Get full details of a single trace
+      operationId: getSpan
+      summary: Get Span
+      description: Get full details of a single span
       tags:
-        - Traces
+        - Spans
       parameters:
-        - name: traceId
+        - name: spanId
           in: path
           required: true
           schema:
             type: string
-          description: The trace ID (e.g., `tr_abc123def456`)
+          description: The span ID (e.g., `sp_abc123def456`)
       responses:
         '200':
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Trace'
+                $ref: '#/components/schemas/Span'
         '404':
-          description: Trace not found
+          description: Span not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /traces/{traceId}/evaluations:
+  /spans/{spanId}/evaluations:
     post:
-      operationId: evaluateTrace
-      summary: Evaluate Trace
-      description: Submit an evaluation for a trace. Evaluations allow you to score traces using custom evaluators.
+      operationId: evaluateSpan
+      summary: Evaluate Span
+      description: Submit an evaluation for a span. Evaluations allow you to score spans using custom evaluators.
       tags:
-        - Traces
+        - Spans
       parameters:
-        - name: traceId
+        - name: spanId
           in: path
           required: true
           schema:
             type: string
-          description: The trace ID to evaluate (e.g., `tr_abc123def456`)
+          description: The span ID to evaluate (e.g., `sp_abc123def456`)
       requestBody:
         required: true
         content:
@@ -695,7 +721,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Trace not found
+          description: Span not found
           content:
             application/json:
               schema:

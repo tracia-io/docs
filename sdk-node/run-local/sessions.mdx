@@ -1,0 +1,168 @@
+---
+title: Sessions
+description: Automatic span chaining for multi-turn conversations
+---
+
+Sessions provide automatic span linking for multi-turn conversations. Each call in a session is automatically connected to previous calls, making it easy to visualize conversation flows in the Tracia dashboard.
+
+## Basic Usage
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+const session = tracia.createSession();
+
+// First call - creates the session (trace)
+const result1 = await session.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'What is the weather?' }],
+});
+// result1.spanId = "sp_abc123"
+// session.getTraceId() = "tr_xyz789" (session ID)
+
+// Second call - automatically linked to first
+const result2 = await session.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'What is the weather?' },
+    result1.message,
+    { role: 'user', content: 'What about tomorrow?' },
+  ],
+});
+// Automatically sends: traceId: "tr_xyz789", parentSpanId: "sp_abc123"
+
+// Third call - chain continues
+const result3 = await session.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'What is the weather?' },
+    result1.message,
+    { role: 'user', content: 'What about tomorrow?' },
+    result2.message,
+    { role: 'user', content: 'Thanks!' },
+  ],
+});
+// Automatically sends: traceId: "tr_xyz789", parentSpanId: result2.spanId
+```
+
+## How It Works
+
+When you use a session:
+
+1. **First call** - A trace ID is generated to group all spans in this session
+2. **Subsequent calls** - Automatically include:
+   - `traceId`: The session's trace ID (groups all spans together)
+   - `parentSpanId`: The previous span's ID (creates a chain)
+
+This creates a tree structure in the Tracia dashboard where you can see the full conversation flow.
+
+## TraciaSession Methods
+
+### runLocal()
+
+Same as `tracia.runLocal()` but with automatic span linking:
+
+```typescript
+const result = await session.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+```
+
+### runResponses()
+
+Same as `tracia.runResponses()` but with automatic span linking:
+
+```typescript
+const result = await session.runResponses({
+  model: 'o3-mini',
+  input: [
+    { role: 'developer', content: 'You are helpful.' },
+    { role: 'user', content: 'What is 2+2?' },
+  ],
+});
+```
+
+### getTraceId()
+
+Returns the session's trace ID (groups all spans):
+
+```typescript
+const traceId = session.getTraceId();
+// Returns: "tr_abc123" or undefined if no calls made yet
+```
+
+### getLastSpanId()
+
+Returns the most recent span ID:
+
+```typescript
+const lastId = session.getLastSpanId();
+// Returns: "sp_xyz789" or undefined if no calls made yet
+```
+
+### reset()
+
+Clears session state to start a new trace:
+
+```typescript
+session.reset();
+// Next call will start a new trace session
+```
+
+## Manual Span Linking
+
+If you prefer manual control, you can use `traceId` and `parentSpanId` directly:
+
+```typescript
+// First call
+const result1 = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+
+// Second call - manually link
+const result2 = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [...],
+  traceId: result1.spanId,      // Use first span as session ID
+  parentSpanId: result1.spanId, // Parent is the first span
+});
+
+// Third call - continue chain
+const result3 = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [...],
+  traceId: result1.spanId,      // Same session
+  parentSpanId: result2.spanId, // Parent is the second span
+});
+```
+
+## Streaming with Sessions
+
+Sessions work with streaming:
+
+```typescript
+const session = tracia.createSession();
+
+const stream = session.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a poem.' }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
+
+const result = await stream.result;
+// session.getTraceId() is now set
+```
+
+## Use Cases
+
+- **Chat applications**: Track full conversation threads
+- **Multi-step agents**: Link planning, execution, and verification steps
+- **RAG pipelines**: Connect retrieval and generation spans
+- **Debugging**: Easily find all spans related to a user session

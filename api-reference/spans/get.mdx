@@ -1,7 +1,7 @@
 ---
-title: Get Trace
-openapi: GET /traces/{traceId}
-description: Get full details of a single trace
+title: Get Span
+openapi: GET /spans/{spanId}
+description: Get full details of a single span
 ---
 
 ## Request
@@ -10,8 +10,8 @@ description: Get full details of a single trace
   Bearer token with your API key: `Bearer tr_your_api_key`
 </ParamField>
 
-<ParamField path="traceId" type="string" required>
-  The trace ID (e.g., `tr_abc123def456`)
+<ParamField path="spanId" type="string" required>
+  The span ID (e.g., `sp_abc123def456`)
 </ParamField>
 
 ## Response
@@ -20,20 +20,28 @@ description: Get full details of a single trace
   Internal identifier
 </ResponseField>
 
-<ResponseField name="traceId" type="string">
-  External trace ID
+<ResponseField name="spanId" type="string">
+  External span ID
 </ResponseField>
 
-<ResponseField name="promptSlug" type="string">
-  Slug of the prompt that was run
+<ResponseField name="traceId" type="string | null">
+  Trace session ID if part of a multi-turn conversation
 </ResponseField>
 
-<ResponseField name="promptVersion" type="number">
+<ResponseField name="parentSpanId" type="string | null">
+  Parent span ID for chained conversations
+</ResponseField>
+
+<ResponseField name="promptSlug" type="string | null">
+  Slug of the prompt that was run (null for runLocal spans)
+</ResponseField>
+
+<ResponseField name="promptVersion" type="number | null">
   Version of the prompt used
 </ResponseField>
 
 <ResponseField name="model" type="string">
-  Model used (e.g., `gpt-4`)
+  Model used (e.g., `gpt-4o`)
 </ResponseField>
 
 <ResponseField name="provider" type="string">
@@ -86,7 +94,7 @@ description: Get full details of a single trace
 </ResponseField>
 
 <ResponseField name="tags" type="string[]">
-  Tags associated with this trace
+  Tags associated with this span
 </ResponseField>
 
 <ResponseField name="userId" type="string | null">
@@ -103,12 +111,12 @@ description: Get full details of a single trace
 
 <RequestExample>
 ```bash cURL
-curl -X GET https://app.tracia.io/api/v1/traces/tr_abc123def456 \
+curl -X GET https://app.tracia.io/api/v1/spans/sp_abc123def456 \
   -H "Authorization: Bearer tr_your_api_key"
 ```
 
 ```typescript SDK
-const trace = await tracia.traces.get('tr_abc123def456');
+const span = await tracia.spans.get('sp_abc123def456');
 ```
 </RequestExample>
 
@@ -116,10 +124,12 @@ const trace = await tracia.traces.get('tr_abc123def456');
 ```json 200
 {
   "id": "clx1abc123",
-  "traceId": "tr_abc123def456",
+  "spanId": "sp_abc123def456",
+  "traceId": "tr_session123",
+  "parentSpanId": null,
   "promptSlug": "welcome-email",
   "promptVersion": 3,
-  "model": "gpt-4",
+  "model": "gpt-4o",
   "provider": "openai",
   "input": {
     "messages": [
@@ -154,8 +164,10 @@ const trace = await tracia.traces.get('tr_abc123def456');
 
 ```json 404
 {
-  "code": "NOT_FOUND",
-  "message": "Trace not found: tr_abc123def456"
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Span not found: sp_abc123def456"
+  }
 }
 ```
 </ResponseExample>

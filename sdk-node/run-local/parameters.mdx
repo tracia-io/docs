@@ -18,10 +18,52 @@ const result = await tracia.runLocal(input: RunLocalInput);
 
 ```typescript
 interface LocalPromptMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | ContentPart[];
+  toolCallId?: string;  // Required for 'tool' role
+  toolName?: string;    // Required for 'tool' role
+}
+
+// Content parts for assistant messages with tool calls
+type ContentPart = TextPart | ToolCallPart;
+
+interface TextPart {
+  type: 'text';
+  text: string;
+}
+
+interface ToolCallPart {
+  type: 'tool_call';
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
 }
 ```
+
+## Streaming
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `stream` | `boolean` | `false` | When `true`, returns `LocalStream` instead of `Promise<RunLocalResult>` |
+| `signal` | `AbortSignal` | `undefined` | AbortSignal to cancel the request (streaming only) |
+
+### Streaming Example
+
+```typescript
+const stream = tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a story.' }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
+
+const result = await stream.result;
+```
+
+See [Streaming](/sdk-node/run-local/streaming) for more details.
 
 ## LLM Configuration
 
@@ -47,13 +89,88 @@ const result = await tracia.runLocal({
 });
 ```
 
+## Tool Calling
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `tools` | `ToolDefinition[]` | `undefined` | Available tools/functions the model can call |
+| `toolChoice` | `ToolChoice` | `undefined` | Control which tools the model can use |
+
+### ToolDefinition
+
+```typescript
+interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: JSONSchema;  // JSON Schema for the tool's parameters
+}
+```
+
+### ToolChoice
+
+```typescript
+type ToolChoice =
+  | 'auto'      // Model decides whether to use tools
+  | 'none'      // Model cannot use tools
+  | 'required'  // Model must use a tool
+  | { tool: string }  // Model must use the specified tool
+```
+
+### Tool Calling Example
+
+```typescript
+// Step 1: Initial request with tools
+const result = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'What is the weather in Tokyo?' }],
+  tools: [{
+    name: 'get_weather',
+    description: 'Get current weather for a location',
+    parameters: {
+      type: 'object',
+      properties: {
+        location: { type: 'string', description: 'City name' }
+      },
+      required: ['location']
+    }
+  }],
+  toolChoice: 'auto'
+});
+
+// Step 2: Handle tool calls
+if (result.finishReason === 'tool_calls') {
+  const toolCall = result.toolCalls[0];
+
+  // Execute your tool
+  const weatherData = await getWeather(toolCall.arguments.location);
+
+  // Step 3: Continue with tool result
+  const followUp = await tracia.runLocal({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'user', content: 'What is the weather in Tokyo?' },
+      result.message,  // Assistant's message (includes tool calls)
+      {
+        role: 'tool',
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        content: JSON.stringify(weatherData)
+      }
+    ],
+    tools: [/* same tools */]
+  });
+
+  console.log(followUp.text); // "The weather in Tokyo is 22°C and sunny."
+}
+```
+
 ## Provider Configuration
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `provider` | `'openai' \| 'anthropic' \| 'google'` | Auto-detected | Override provider detection for custom models |
 | `providerApiKey` | `string` | Environment variable | Override the default API key |
-| `customOptions` | `Record<string, unknown>` | `undefined` | Provider-specific options passed to the SDK |
+| `customOptions` | `Record<string, unknown>` | `undefined` | Provider-specific options passed to the underlying SDK |
 
 ### Provider Override
 
@@ -81,17 +198,24 @@ const result = await tracia.runLocal({
 
 ### Custom Options
 
-Pass provider-specific options not covered by standard parameters:
+Pass provider-specific options that aren't directly supported:
 
 ```typescript
-// OpenAI-specific options
+// OpenAI: enable JSON mode
 const result = await tracia.runLocal({
   model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Return a JSON object with name and age.' }],
+  customOptions: {
+    response_format: { type: 'json_object' }
+  }
+});
+
+// Anthropic: custom metadata
+const result = await tracia.runLocal({
+  model: 'claude-sonnet-4-20250514',
   messages: [{ role: 'user', content: 'Hello!' }],
   customOptions: {
-    frequency_penalty: 0.5,
-    presence_penalty: 0.3,
-    logit_bias: { '50256': -100 }
+    metadata: { user_id: 'user-123' }
   }
 });
 ```
@@ -119,15 +243,17 @@ const result = await tracia.runLocal({
 
 See [Variables](/sdk-node/run-local/variables) for more details.
 
-## Tracing Options
+## Span Options
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `tags` | `string[]` | `undefined` | Tags for filtering traces in the dashboard |
+| `tags` | `string[]` | `undefined` | Tags for filtering spans in the dashboard |
 | `userId` | `string` | `undefined` | End user identifier |
-| `sessionId` | `string` | `undefined` | Session identifier for grouping traces |
-| `sendTrace` | `boolean` | `true` | Whether to send a trace to Tracia |
-| `traceId` | `string` | Auto-generated | Custom trace ID (must match `tr_` + 16 hex chars) |
+| `sessionId` | `string` | `undefined` | Session identifier for grouping spans |
+| `sendTrace` | `boolean` | `true` | Whether to send the span to Tracia |
+| `spanId` | `string` | Auto-generated | Custom span ID (must match `sp_` + 16 hex chars) |
+| `traceId` | `string` | `undefined` | Group related spans together (session ID for multi-turn conversations) |
+| `parentSpanId` | `string` | `undefined` | Link to parent span (creates a chain) |
 
 ### Example
 
@@ -138,11 +264,31 @@ const result = await tracia.runLocal({
   tags: ['production', 'chat'],
   userId: 'user_123',
   sessionId: 'session_abc',
-  traceId: 'tr_1234567890abcdef'
+  spanId: 'sp_1234567890abcdef'
 });
 ```
 
-### Disabling Traces
+### Span Linking for Multi-Turn Conversations
+
+```typescript
+// First call
+const result1 = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+
+// Second call - linked to first
+const result2 = await tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [...],
+  traceId: result1.spanId,      // Group all spans in this session
+  parentSpanId: result1.spanId, // Chain to parent span
+});
+```
+
+See [Sessions](/sdk-node/run-local/sessions) for automatic span linking.
+
+### Disabling Tracing
 
 ```typescript
 const result = await tracia.runLocal({
@@ -151,7 +297,7 @@ const result = await tracia.runLocal({
   sendTrace: false
 });
 
-console.log(result.traceId); // Empty string
+console.log(result.spanId); // Empty string
 ```
 
 See [Tracing](/sdk-node/run-local/tracing) for more details.

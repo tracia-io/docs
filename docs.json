@@ -41,22 +41,25 @@
                 "pages": [
                   "sdk-node/run-local",
                   "sdk-node/run-local/basic-usage",
+                  "sdk-node/run-local/streaming",
+                  "sdk-node/run-local/sessions",
                   "sdk-node/run-local/parameters",
                   "sdk-node/run-local/response",
                   "sdk-node/run-local/providers",
                   "sdk-node/run-local/models",
                   "sdk-node/run-local/variables",
                   "sdk-node/run-local/tracing",
+                  "sdk-node/run-local/responses-api",
                   "sdk-node/run-local/advanced"
                 ]
               },
               {
-                "group": "Traces",
+                "group": "Spans",
                 "pages": [
-                  "sdk-node/traces",
-                  "sdk-node/traces/list",
-                  "sdk-node/traces/get",
-                  "sdk-node/traces/evaluate"
+                  "sdk-node/spans",
+                  "sdk-node/spans/list",
+                  "sdk-node/spans/get",
+                  "sdk-node/spans/evaluate"
                 ]
               },
               "sdk-node/error-handling"
@@ -85,11 +88,11 @@
             ]
           },
           {
-            "group": "Traces",
+            "group": "Spans",
             "pages": [
-              "api-reference/traces/list",
-              "api-reference/traces/get",
-              "api-reference/traces/evaluate"
+              "api-reference/spans/list",
+              "api-reference/spans/get",
+              "api-reference/spans/evaluate"
             ]
           }
         ]

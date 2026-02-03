@@ -1,7 +1,7 @@
 ---
-title: List Traces
-openapi: GET /traces
-description: Get traces with optional filters and pagination
+title: List Spans
+openapi: GET /spans
+description: Get spans with optional filters and pagination
 ---
 
 ## Request
@@ -19,11 +19,11 @@ description: Get traces with optional filters and pagination
 </ParamField>
 
 <ParamField query="startDate" type="string">
-  Filter traces created after this ISO 8601 date
+  Filter spans created after this ISO 8601 date
 </ParamField>
 
 <ParamField query="endDate" type="string">
-  Filter traces created before this ISO 8601 date
+  Filter spans created before this ISO 8601 date
 </ParamField>
 
 <ParamField query="userId" type="string">
@@ -48,20 +48,23 @@ description: Get traces with optional filters and pagination
 
 ## Response
 
-<ResponseField name="traces" type="array">
-  Array of trace objects
-  <Expandable title="Trace object">
+<ResponseField name="spans" type="array">
+  Array of span objects
+  <Expandable title="Span object">
     <ResponseField name="id" type="string">
       Internal identifier
     </ResponseField>
-    <ResponseField name="traceId" type="string">
-      External trace ID (e.g., `tr_abc123`)
+    <ResponseField name="spanId" type="string">
+      External span ID (e.g., `sp_abc123`)
     </ResponseField>
-    <ResponseField name="promptSlug" type="string">
-      Slug of the prompt that was run
+    <ResponseField name="traceId" type="string | null">
+      Trace session ID if part of a multi-turn conversation
+    </ResponseField>
+    <ResponseField name="promptSlug" type="string | null">
+      Slug of the prompt that was run (null for runLocal spans)
     </ResponseField>
     <ResponseField name="model" type="string">
-      Model used (e.g., `gpt-4`)
+      Model used (e.g., `gpt-4o`)
     </ResponseField>
     <ResponseField name="status" type="string">
       `SUCCESS` or `ERROR`
@@ -93,12 +96,12 @@ description: Get traces with optional filters and pagination
 
 <RequestExample>
 ```bash cURL
-curl -X GET "https://app.tracia.io/api/v1/traces?promptSlug=welcome-email&limit=20" \
+curl -X GET "https://app.tracia.io/api/v1/spans?promptSlug=welcome-email&limit=20" \
   -H "Authorization: Bearer tr_your_api_key"
 ```
 
 ```typescript SDK
-const { traces, nextCursor } = await tracia.traces.list({
+const { spans, nextCursor } = await tracia.spans.list({
   promptSlug: 'welcome-email',
   limit: 20
 });
@@ -108,12 +111,13 @@ const { traces, nextCursor } = await tracia.traces.list({
 <ResponseExample>
 ```json 200
 {
-  "traces": [
+  "spans": [
     {
       "id": "clx1abc123",
-      "traceId": "tr_abc123def456",
+      "spanId": "sp_abc123def456",
+      "traceId": "tr_session123",
       "promptSlug": "welcome-email",
-      "model": "gpt-4",
+      "model": "gpt-4o",
       "status": "SUCCESS",
       "latencyMs": 1250,
       "inputTokens": 150,
@@ -129,8 +133,10 @@ const { traces, nextCursor } = await tracia.traces.list({
 
 ```json 401
 {
-  "code": "UNAUTHORIZED",
-  "message": "Invalid or missing API key"
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or missing API key"
+  }
 }
 ```
 </ResponseExample>

@@ -1,7 +1,7 @@
 ---
-title: Evaluate Trace
-openapi: POST /traces/{traceId}/evaluations
-description: Submit an evaluation for a trace
+title: Evaluate Span
+openapi: POST /spans/{spanId}/evaluations
+description: Submit an evaluation for a span
 ---
 
 ## Request
@@ -10,8 +10,8 @@ description: Submit an evaluation for a trace
   Bearer token with your API key: `Bearer tr_your_api_key`
 </ParamField>
 
-<ParamField path="traceId" type="string" required>
-  The trace ID to evaluate (e.g., `tr_abc123def456`)
+<ParamField path="spanId" type="string" required>
+  The span ID to evaluate (e.g., `sp_abc123def456`)
 </ParamField>
 
 <ParamField body="evaluatorKey" type="string" required>
@@ -58,7 +58,7 @@ description: Submit an evaluation for a trace
 
 <RequestExample>
 ```bash cURL
-curl -X POST https://app.tracia.io/api/v1/traces/tr_abc123def456/evaluations \
+curl -X POST https://app.tracia.io/api/v1/spans/sp_abc123def456/evaluations \
   -H "Authorization: Bearer tr_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -73,7 +73,7 @@ import { Tracia, Eval } from 'tracia';
 
 const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
 
-await tracia.traces.evaluate('tr_abc123def456', {
+await tracia.spans.evaluate('sp_abc123def456', {
   evaluator: 'quality',
   value: Eval.POSITIVE,
   note: 'Response was accurate and helpful'
@@ -96,15 +96,19 @@ await tracia.traces.evaluate('tr_abc123def456', {
 
 ```json 400
 {
-  "code": "INVALID_REQUEST",
-  "message": "Invalid evaluation value. Must be a number."
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "Invalid evaluation value. Must be a number."
+  }
 }
 ```
 
 ```json 404
 {
-  "code": "NOT_FOUND",
-  "message": "Trace not found: tr_abc123def456"
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Span not found: sp_abc123def456"
+  }
 }
 ```
 </ResponseExample>

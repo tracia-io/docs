@@ -1,13 +1,13 @@
 ---
-title: List Traces
-description: Get traces with filters and pagination
+title: List Spans
+description: Get spans with filters and pagination
 ---
 
 ```typescript
-const { traces, nextCursor } = await tracia.traces.list(options);
+const { spans, nextCursor } = await tracia.spans.list(options);
 ```
 
-Retrieve traces with optional filters and cursor-based pagination.
+Retrieve spans with optional filters and cursor-based pagination.
 
 ## Parameters
 
@@ -15,8 +15,8 @@ Retrieve traces with optional filters and cursor-based pagination.
 |-----------|------|----------|-------------|
 | `options.promptSlug` | `string` | No | Filter by prompt slug |
 | `options.status` | `'SUCCESS' \| 'ERROR'` | No | Filter by status |
-| `options.startDate` | `Date` | No | Filter traces created after this date |
-| `options.endDate` | `Date` | No | Filter traces created before this date |
+| `options.startDate` | `Date` | No | Filter spans created after this date |
+| `options.endDate` | `Date` | No | Filter spans created before this date |
 | `options.userId` | `string` | No | Filter by end user ID |
 | `options.sessionId` | `string` | No | Filter by session ID |
 | `options.tags` | `string[]` | No | Filter by tags (AND logic) |
@@ -26,15 +26,16 @@ Retrieve traces with optional filters and cursor-based pagination.
 ## Response
 
 ```typescript
-interface ListTracesResult {
-  traces: TraceListItem[];
+interface ListSpansResult {
+  spans: SpanListItem[];
   nextCursor?: string;
 }
 
-interface TraceListItem {
+interface SpanListItem {
   id: string;
-  traceId: string;
-  promptSlug: string;
+  spanId: string;
+  traceId: string | null;
+  promptSlug: string | null;
   model: string;
   status: 'SUCCESS' | 'ERROR';
   latencyMs: number;
@@ -51,28 +52,28 @@ interface TraceListItem {
 ### Basic Usage
 
 ```typescript
-const { traces } = await tracia.traces.list();
+const { spans } = await tracia.spans.list();
 
-console.log(`Found ${traces.length} traces`);
+console.log(`Found ${spans.length} spans`);
 ```
 
 ### Filtering by Prompt
 
 ```typescript
-const { traces } = await tracia.traces.list({
+const { spans } = await tracia.spans.list({
   promptSlug: 'welcome-email',
   status: 'SUCCESS'
 });
 
-traces.forEach(trace => {
-  console.log(`${trace.traceId}: ${trace.latencyMs}ms, ${trace.totalTokens} tokens`);
+spans.forEach(span => {
+  console.log(`${span.spanId}: ${span.latencyMs}ms, ${span.totalTokens} tokens`);
 });
 ```
 
 ### Date Range Filtering
 
 ```typescript
-const { traces } = await tracia.traces.list({
+const { spans } = await tracia.spans.list({
   startDate: new Date('2024-01-01'),
   endDate: new Date('2024-01-31')
 });
@@ -81,7 +82,7 @@ const { traces } = await tracia.traces.list({
 ### Filtering by Tags
 
 ```typescript
-const { traces } = await tracia.traces.list({
+const { spans } = await tracia.spans.list({
   tags: ['production', 'v2']  // Must have ALL tags
 });
 ```
@@ -89,34 +90,34 @@ const { traces } = await tracia.traces.list({
 ### Pagination
 
 ```typescript
-async function getAllTraces() {
-  const allTraces = [];
+async function getAllSpans() {
+  const allSpans = [];
   let cursor: string | undefined;
 
   do {
-    const { traces, nextCursor } = await tracia.traces.list({
+    const { spans, nextCursor } = await tracia.spans.list({
       limit: 100,
       cursor
     });
 
-    allTraces.push(...traces);
+    allSpans.push(...spans);
     cursor = nextCursor;
   } while (cursor);
 
-  return allTraces;
+  return allSpans;
 }
 ```
 
 ### Calculating Costs
 
 ```typescript
-const { traces } = await tracia.traces.list({
+const { spans } = await tracia.spans.list({
   promptSlug: 'welcome-email',
   startDate: new Date('2024-01-01')
 });
 
-const totalCost = traces.reduce((sum, t) => sum + (t.cost || 0), 0);
-const totalTokens = traces.reduce((sum, t) => sum + t.totalTokens, 0);
+const totalCost = spans.reduce((sum, s) => sum + (s.cost || 0), 0);
+const totalTokens = spans.reduce((sum, s) => sum + s.totalTokens, 0);
 
 console.log(`Total cost: $${totalCost.toFixed(4)}`);
 console.log(`Total tokens: ${totalTokens}`);
@@ -128,7 +129,7 @@ console.log(`Total tokens: ${totalTokens}`);
 import { TraciaError, TraciaErrorCode } from 'tracia';
 
 try {
-  const { traces } = await tracia.traces.list();
+  const { spans } = await tracia.spans.list();
 } catch (error) {
   if (error instanceof TraciaError) {
     if (error.code === TraciaErrorCode.UNAUTHORIZED) {

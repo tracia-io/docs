@@ -1,0 +1,226 @@
+---
+title: Streaming
+description: Real-time streaming responses from LLM providers
+---
+
+Enable streaming to receive LLM responses as they're generated, providing a more responsive user experience.
+
+## Basic Streaming
+
+Set `stream: true` to get a `LocalStream` instead of a `Promise`:
+
+```typescript
+const stream = tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a short story about a robot.' }],
+  stream: true,
+});
+
+// Span ID is available immediately
+console.log('Span:', stream.spanId);
+
+// Iterate to receive chunks as they arrive
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
+
+// Get final result with usage stats
+const result = await stream.result;
+console.log('\n\nTokens used:', result.usage.totalTokens);
+```
+
+## LocalStream Interface
+
+When streaming, `runLocal()` returns a `LocalStream` object:
+
+```typescript
+interface LocalStream {
+  // Span ID available immediately (before any chunks arrive)
+  readonly spanId: string;
+
+  // Trace ID (session) if provided
+  readonly traceId: string | null;
+
+  // Async iterator yielding text chunks
+  [Symbol.asyncIterator](): AsyncIterator<string>;
+
+  // Promise resolving to final result after stream completes
+  readonly result: Promise<StreamResult>;
+
+  // Abort the stream early
+  abort(): void;
+}
+```
+
+## StreamResult
+
+After the stream completes, the `result` promise resolves to:
+
+```typescript
+interface StreamResult extends RunLocalResult {
+  // Whether the stream was aborted
+  aborted: boolean;
+}
+```
+
+## Aborting a Stream
+
+Use `abort()` to cancel a stream early:
+
+```typescript
+const stream = tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Write a very long essay...' }],
+  stream: true,
+});
+
+let charCount = 0;
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+  charCount += chunk.length;
+
+  // Stop after 500 characters
+  if (charCount > 500) {
+    stream.abort();
+    break;
+  }
+}
+
+const result = await stream.result;
+console.log('\nAborted:', result.aborted); // true
+```
+
+## Using AbortSignal
+
+Pass an `AbortSignal` to integrate with your application's cancellation logic:
+
+```typescript
+const controller = new AbortController();
+
+// Cancel after 5 seconds
+setTimeout(() => controller.abort(), 5000);
+
+const stream = tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Explain the universe.' }],
+  stream: true,
+  signal: controller.signal,
+});
+
+try {
+  for await (const chunk of stream) {
+    process.stdout.write(chunk);
+  }
+} catch (error) {
+  if (error.code === 'ABORTED') {
+    console.log('\nRequest was cancelled');
+  }
+}
+```
+
+## Streaming with Tool Calls
+
+Streaming works with tool calling. Tool calls are available in the final result:
+
+```typescript
+const stream = tracia.runLocal({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'What is the weather in Tokyo?' }],
+  stream: true,
+  tools: [{
+    name: 'get_weather',
+    description: 'Get current weather for a location',
+    parameters: {
+      type: 'object',
+      properties: {
+        location: { type: 'string' }
+      },
+      required: ['location']
+    }
+  }],
+});
+
+// Text chunks still stream as normal
+for await (const chunk of stream) {
+  process.stdout.write(chunk);
+}
+
+const result = await stream.result;
+
+// Handle tool calls
+if (result.finishReason === 'tool_calls') {
+  const toolCall = result.toolCalls[0];
+  const weatherData = await getWeather(toolCall.arguments.location);
+
+  // Continue conversation with tool result
+  const followUp = tracia.runLocal({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'user', content: 'What is the weather in Tokyo?' },
+      result.message,  // Assistant's message with tool calls
+      {
+        role: 'tool',
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        content: JSON.stringify(weatherData)
+      }
+    ],
+    stream: true,
+    tools: [/* same tools */]
+  });
+
+  for await (const chunk of followUp) {
+    process.stdout.write(chunk);
+  }
+}
+```
+
+## Example: HTTP Streaming Response
+
+Stream directly to an HTTP response in Next.js or Express:
+
+```typescript
+// Next.js App Router
+export async function POST(request: Request) {
+  const { message } = await request.json();
+
+  const stream = tracia.runLocal({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: message }],
+    stream: true,
+  });
+
+  const encoder = new TextEncoder();
+  const readable = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of stream) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(readable, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}
+```
+
+## Provider Support
+
+Streaming is supported by all providers:
+
+| Provider | Streaming Support |
+|----------|------------------|
+| OpenAI | Full support |
+| Anthropic | Full support |
+| Google | Full support |
+
+## Spans and Streaming
+
+Spans are submitted after the stream completes (or is aborted):
+
+- The span includes the complete response text accumulated during streaming
+- Token usage is captured from the stream's final usage event
+- If aborted, the span records the partial response
+- Span submission is still non-blocking and asynchronous
