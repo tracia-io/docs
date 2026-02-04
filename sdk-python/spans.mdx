@@ -1,0 +1,133 @@
+---
+title: Overview
+description: SDK reference for span operations
+---
+
+All span operations are available under the `client.spans` namespace. Spans are automatically created when you run prompts or use `run_local()`, providing visibility into LLM usage, performance, and costs.
+
+<Note>
+  **Terminology**: A **span** represents a single LLM call. Multiple spans can be grouped into a **trace** (session) using the `trace_id` parameter.
+</Note>
+
+```python
+from tracia import Tracia, Eval, EvaluateOptions, ListSpansOptions
+
+client = Tracia(api_key="tr_your_api_key")
+
+# List spans with filters
+result = client.spans.list(ListSpansOptions(
+    prompt_slug="welcome-email",
+    status="SUCCESS",
+    limit=20,
+))
+print(result.spans)
+
+# Get a single span
+span = client.spans.get("sp_abc123def456")
+
+# Submit an evaluation for a span
+client.spans.evaluate(
+    "sp_abc123def456",
+    EvaluateOptions(evaluator="quality", value=Eval.POSITIVE),
+)
+```
+
+## Async Variants
+
+```python
+result = await client.spans.alist(ListSpansOptions(prompt_slug="welcome-email"))
+span = await client.spans.aget("sp_abc123def456")
+await client.spans.aevaluate("sp_abc123def456", EvaluateOptions(...))
+```
+
+## Available Methods
+
+<CardGroup cols={3}>
+  <Card title="List" icon="list" href="/sdk-python/spans/list">
+    Get spans with filters and pagination
+  </Card>
+  <Card title="Get" icon="eye" href="/sdk-python/spans/get">
+    Retrieve full details of a single span
+  </Card>
+  <Card title="Evaluate" icon="star" href="/sdk-python/spans/evaluate">
+    Submit evaluations for spans
+  </Card>
+</CardGroup>
+
+## Types
+
+### Span
+
+```python
+class Span(BaseModel):
+    id: str
+    span_id: str                            # alias: "spanId"
+    trace_id: str                           # alias: "traceId"
+    parent_span_id: str | None              # alias: "parentSpanId"
+    prompt_slug: str | None                 # alias: "promptSlug"
+    prompt_version: int | None              # alias: "promptVersion"
+    model: str
+    provider: str
+    input: dict[str, Any]                   # {"messages": [...]}
+    variables: dict[str, str] | None
+    output: str | None
+    status: Literal["SUCCESS", "ERROR"]
+    error: str | None
+    latency_ms: int                         # alias: "latencyMs"
+    input_tokens: int                       # alias: "inputTokens"
+    output_tokens: int                      # alias: "outputTokens"
+    total_tokens: int                       # alias: "totalTokens"
+    cost: float | None
+    tags: list[str]
+    user_id: str | None                     # alias: "userId"
+    session_id: str | None                  # alias: "sessionId"
+    created_at: datetime                    # alias: "createdAt"
+```
+
+### ListSpansOptions
+
+```python
+class ListSpansOptions(BaseModel):
+    prompt_slug: str | None = None          # alias: "promptSlug"
+    status: Literal["SUCCESS", "ERROR"] | None = None
+    start_date: datetime | None = None      # alias: "startDate"
+    end_date: datetime | None = None        # alias: "endDate"
+    user_id: str | None = None              # alias: "userId"
+    session_id: str | None = None           # alias: "sessionId"
+    tags: list[str] | None = None
+    limit: int | None = None
+    cursor: str | None = None
+```
+
+### EvaluateOptions
+
+```python
+class EvaluateOptions(BaseModel):
+    evaluator: str
+    value: int | float
+    note: str | None = None
+```
+
+### EvaluateResult
+
+```python
+class EvaluateResult(BaseModel):
+    id: str
+    evaluator_key: str       # alias: "evaluatorKey"
+    evaluator_name: str      # alias: "evaluatorName"
+    value: float
+    source: str
+    note: str | None
+    created_at: datetime     # alias: "createdAt"
+```
+
+### Eval Constant
+
+Use the `Eval` constant for binary evaluations:
+
+```python
+from tracia import Eval
+
+Eval.POSITIVE  # 1
+Eval.NEGATIVE  # 0
+```

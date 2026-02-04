@@ -1,0 +1,180 @@
+---
+title: Providers
+description: OpenAI, Anthropic, and Google provider setup and configuration
+---
+
+The Python SDK uses [LiteLLM](https://docs.litellm.ai/) under the hood for unified provider access. LiteLLM is included as a dependency — no additional provider packages are needed.
+
+## Installation
+
+```bash
+pip install tracia
+```
+
+LiteLLM is installed automatically with Tracia and handles all provider communication.
+
+## OpenAI
+
+### Environment Variable
+
+```bash
+OPENAI_API_KEY=sk-your-openai-key
+```
+
+### Usage
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"},
+    ],
+    temperature=0.7,
+    max_output_tokens=500,
+)
+```
+
+### Streaming
+
+```python
+stream = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a poem."}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk, end="")
+```
+
+## Anthropic
+
+### Environment Variable
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
+```
+
+### Usage
+
+```python
+result = client.run_local(
+    model="claude-sonnet-4-20250514",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain quantum computing."},
+    ],
+    temperature=0.7,
+    max_output_tokens=1000,
+)
+```
+
+### Streaming
+
+```python
+stream = client.run_local(
+    model="claude-sonnet-4-20250514",
+    messages=[{"role": "user", "content": "Write a story."}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk, end="")
+```
+
+## Google
+
+### Environment Variable
+
+```bash
+GOOGLE_API_KEY=your-google-api-key
+```
+
+### Usage
+
+```python
+result = client.run_local(
+    model="gemini-2.0-flash",
+    messages=[
+        {"role": "user", "content": "What are the benefits of Python?"},
+    ],
+    temperature=0.5,
+    max_output_tokens=800,
+)
+```
+
+### Streaming
+
+```python
+stream = client.run_local(
+    model="gemini-2.0-flash",
+    messages=[{"role": "user", "content": "Explain machine learning."}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk, end="")
+```
+
+## Provider Override
+
+The SDK automatically detects the provider based on the model name. For custom or fine-tuned models not in the built-in list, specify the provider explicitly:
+
+```python
+# Fine-tuned OpenAI model
+result = client.run_local(
+    model="ft:gpt-4o:my-org:custom-model:abc123",
+    provider="openai",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+## API Key Override
+
+Override the environment variable for a specific request:
+
+```python
+import os
+
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+    provider_api_key=os.environ["OPENAI_API_KEY_SECONDARY"],
+)
+```
+
+This is useful for:
+- Multi-tenant applications with per-customer API keys
+- Testing with different API keys
+- Using organization-specific keys
+
+## Error Handling by Provider
+
+```python
+from tracia import Tracia, TraciaError, TraciaErrorCode
+
+try:
+    result = client.run_local(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+except TraciaError as error:
+    if error.code == TraciaErrorCode.MISSING_PROVIDER_API_KEY:
+        print("Set OPENAI_API_KEY environment variable")
+    elif error.code == TraciaErrorCode.PROVIDER_ERROR:
+        print(f"Provider API error: {error.message}")
+    elif error.code == TraciaErrorCode.UNSUPPORTED_MODEL:
+        print("Specify provider explicitly for custom models")
+```
+
+## Provider Comparison
+
+| Feature | OpenAI | Anthropic | Google |
+|---------|--------|-----------|--------|
+| System messages | Native support | Native support | Converted internally |
+| Temperature range | 0-2 | 0-1 | 0-2 |
+| Max output tokens | Model-dependent | Model-dependent | Model-dependent |
+| Stop sequences | Supported | Supported | Supported |
+| Streaming | Supported | Supported | Supported |
+| Tool calling | Supported | Supported | Supported |

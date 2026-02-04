@@ -1,0 +1,131 @@
+---
+title: Create Prompt
+description: Create a new prompt
+---
+
+```python
+prompt = client.prompts.create(options)
+# Async
+prompt = await client.prompts.acreate(options)
+```
+
+Create a new prompt with the specified content. The prompt is created at version 1.
+
+## Parameters
+
+Pass a `CreatePromptOptions` object:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `str` | Yes | URL-friendly identifier |
+| `name` | `str` | Yes | Display name for the prompt |
+| `messages` | `list[PromptMessage]` | Yes | Array of messages |
+| `model` | `str` | Yes | Default model (e.g., `gpt-4o`) |
+| `provider` | `LLMProvider` | Yes | Provider (`"openai"`, `"anthropic"`, `"google"`) |
+| `description` | `str` | No | Description of the prompt |
+| `temperature` | `float` | No | Default temperature |
+| `max_output_tokens` | `int` | No | Default max output tokens |
+| `top_p` | `float` | No | Default top-p value |
+| `stop_sequences` | `list[str]` | No | Default stop sequences |
+
+### PromptMessage
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `role` | `str` | Yes | `system`, `developer`, `user`, or `assistant` |
+| `content` | `str` | Yes | Message content (supports `{{variables}}`) |
+
+## Response
+
+Returns the created `Prompt` object.
+
+## Examples
+
+### Basic Usage
+
+```python
+from tracia import CreatePromptOptions, PromptMessage
+
+prompt = client.prompts.create(CreatePromptOptions(
+    slug="welcome-email",
+    name="Welcome Email",
+    model="gpt-4o",
+    provider="openai",
+    messages=[
+        PromptMessage(role="system", content="You are a helpful assistant."),
+        PromptMessage(role="user", content="Write a welcome email for {{name}}."),
+    ],
+))
+
+print(prompt.slug)  # "welcome-email"
+```
+
+### With Description and Options
+
+```python
+prompt = client.prompts.create(CreatePromptOptions(
+    slug="onboarding-welcome",
+    name="Welcome Email",
+    description="Sent to new users after signup",
+    model="gpt-4o",
+    provider="openai",
+    temperature=0.7,
+    messages=[
+        PromptMessage(role="system", content="You write professional emails."),
+        PromptMessage(role="user", content="Write a welcome email for {{name}} at {{company}}."),
+    ],
+))
+```
+
+### Multi-Turn Conversation
+
+```python
+prompt = client.prompts.create(CreatePromptOptions(
+    slug="code-review",
+    name="Code Review Assistant",
+    model="claude-sonnet-4-20250514",
+    provider="anthropic",
+    messages=[
+        PromptMessage(
+            role="system",
+            content="You are a senior software engineer conducting code reviews.",
+        ),
+        PromptMessage(
+            role="user",
+            content="Please review this {{language}} code:\n\n{{code}}",
+        ),
+        PromptMessage(
+            role="assistant",
+            content="I'll review this code for correctness, performance, and best practices.",
+        ),
+        PromptMessage(
+            role="user",
+            content="Focus especially on {{focus_area}}.",
+        ),
+    ],
+))
+```
+
+<Tip>
+  Slugs must be lowercase with hyphens only (e.g., `welcome-email`).
+</Tip>
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode
+
+try:
+    prompt = client.prompts.create(CreatePromptOptions(
+        slug="welcome-email",
+        name="Welcome Email",
+        model="gpt-4o",
+        provider="openai",
+        messages=[...],
+    ))
+except TraciaError as error:
+    if error.code == TraciaErrorCode.CONFLICT:
+        print("A prompt with this slug already exists")
+    elif error.code == TraciaErrorCode.INVALID_REQUEST:
+        print(f"Invalid request: {error.message}")
+```

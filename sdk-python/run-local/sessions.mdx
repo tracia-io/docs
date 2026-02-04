@@ -1,0 +1,160 @@
+---
+title: Sessions
+description: Automatic span chaining for multi-turn conversations
+---
+
+Sessions provide automatic span linking for multi-turn conversations. Each call in a session is automatically connected to previous calls, making it easy to visualize conversation flows in the Tracia dashboard.
+
+## Basic Usage
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+session = client.create_session()
+
+# First call - creates the session (trace)
+result1 = session.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "What is the weather?"}],
+)
+# result1.span_id = "sp_abc123"
+# session.trace_id = "tr_xyz789" (session ID)
+
+# Second call - automatically linked to first
+result2 = session.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "What is the weather?"},
+        result1.message,
+        {"role": "user", "content": "What about tomorrow?"},
+    ],
+)
+# Automatically sends: trace_id="tr_xyz789", parent_span_id="sp_abc123"
+
+# Third call - chain continues
+result3 = session.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "What is the weather?"},
+        result1.message,
+        {"role": "user", "content": "What about tomorrow?"},
+        result2.message,
+        {"role": "user", "content": "Thanks!"},
+    ],
+)
+# Automatically sends: trace_id="tr_xyz789", parent_span_id=result2.span_id
+```
+
+## How It Works
+
+When you use a session:
+
+1. **First call** - A trace ID is generated to group all spans in this session
+2. **Subsequent calls** - Automatically include:
+   - `trace_id`: The session's trace ID (groups all spans together)
+   - `parent_span_id`: The previous span's ID (creates a chain)
+
+This creates a tree structure in the Tracia dashboard where you can see the full conversation flow.
+
+## TraciaSession Methods
+
+### run_local() / arun_local()
+
+Same as `client.run_local()` but with automatic span linking:
+
+```python
+# Sync
+result = session.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+# Async
+result = await session.arun_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+### trace_id
+
+Property that returns the session's trace ID (groups all spans):
+
+```python
+trace_id = session.trace_id
+# Returns: "tr_abc123" or None if no calls made yet
+```
+
+### last_span_id
+
+Property that returns the most recent span ID:
+
+```python
+last_id = session.last_span_id
+# Returns: "sp_xyz789" or None if no calls made yet
+```
+
+### reset()
+
+Clears session state to start a new trace:
+
+```python
+session.reset()
+# Next call will start a new trace session
+```
+
+## Manual Span Linking
+
+If you prefer manual control, you can use `trace_id` and `parent_span_id` directly:
+
+```python
+# First call
+result1 = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+# Second call - manually link
+result2 = client.run_local(
+    model="gpt-4o",
+    messages=[...],
+    trace_id=result1.span_id,       # Use first span as session ID
+    parent_span_id=result1.span_id,  # Parent is the first span
+)
+
+# Third call - continue chain
+result3 = client.run_local(
+    model="gpt-4o",
+    messages=[...],
+    trace_id=result1.span_id,       # Same session
+    parent_span_id=result2.span_id,  # Parent is the second span
+)
+```
+
+## Streaming with Sessions
+
+Sessions work with streaming:
+
+```python
+session = client.create_session()
+
+stream = session.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a poem."}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk, end="")
+
+result = stream.result.result()  # Future[StreamResult] → StreamResult
+# session.trace_id is now set
+```
+
+## Use Cases
+
+- **Chat applications**: Track full conversation threads
+- **Multi-step agents**: Link planning, execution, and verification steps
+- **RAG pipelines**: Connect retrieval and generation spans
+- **Debugging**: Easily find all spans related to a user session

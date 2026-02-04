@@ -1,0 +1,141 @@
+---
+title: Get Span
+description: Retrieve full details of a single span
+---
+
+```python
+span = client.spans.get(span_id)
+# Async
+span = await client.spans.aget(span_id)
+```
+
+Retrieve a single span by its ID, including full input/output details.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `span_id` | `str` | Yes | The span ID (e.g., `sp_abc123def456`) |
+
+## Response
+
+```python
+class Span(BaseModel):
+    id: str
+    span_id: str                   # alias: "spanId"
+    trace_id: str                  # alias: "traceId"
+    parent_span_id: str | None     # alias: "parentSpanId"
+    prompt_slug: str | None        # alias: "promptSlug"
+    prompt_version: int | None     # alias: "promptVersion"
+    model: str
+    provider: str
+    input: dict[str, Any]          # {"messages": [...]}
+    variables: dict[str, str] | None
+    output: str | None
+    status: Literal["SUCCESS", "ERROR"]
+    error: str | None
+    latency_ms: int                # alias: "latencyMs"
+    input_tokens: int              # alias: "inputTokens"
+    output_tokens: int             # alias: "outputTokens"
+    total_tokens: int              # alias: "totalTokens"
+    cost: float | None
+    tags: list[str]
+    user_id: str | None            # alias: "userId"
+    session_id: str | None         # alias: "sessionId"
+    created_at: datetime           # alias: "createdAt"
+```
+
+## Examples
+
+### Basic Usage
+
+```python
+span = client.spans.get("sp_abc123def456")
+
+print(f"Model: {span.model} ({span.provider})")
+print(f"Status: {span.status}")
+print(f"Latency: {span.latency_ms}ms")
+```
+
+### Viewing Input and Output
+
+```python
+span = client.spans.get("sp_abc123def456")
+
+print("Input messages:")
+for msg in span.input["messages"]:
+    print(f"  [{msg['role']}]: {msg['content'][:100]}...")
+
+print(f"\nOutput:\n{span.output}")
+```
+
+### Checking Variables Used
+
+```python
+span = client.spans.get("sp_abc123def456")
+
+if span.variables:
+    print("Variables used:")
+    for key, value in span.variables.items():
+        print(f"  {key}: {value}")
+```
+
+### Checking Trace Session
+
+```python
+span = client.spans.get("sp_abc123def456")
+
+if span.trace_id:
+    print(f"Part of trace session: {span.trace_id}")
+
+if span.parent_span_id:
+    print(f"Parent span: {span.parent_span_id}")
+```
+
+### Handling Errors
+
+```python
+span = client.spans.get("sp_abc123def456")
+
+if span.status == "ERROR":
+    print(f"Span failed: {span.error}")
+else:
+    print("Span succeeded")
+    print(f"Tokens: {span.input_tokens} in, {span.output_tokens} out")
+    cost_str = f"${span.cost:.4f}" if span.cost else "N/A"
+    print(f"Cost: {cost_str}")
+```
+
+### Debugging a Prompt Run
+
+```python
+span = client.spans.get("sp_abc123def456")
+
+print("=== Span Debug Info ===")
+print(f"Span ID: {span.span_id}")
+print(f"Trace ID: {span.trace_id or 'N/A'}")
+print(f"Parent Span: {span.parent_span_id or 'N/A'}")
+print(f"Prompt: {span.prompt_slug or 'run_local'} v{span.prompt_version or 'N/A'}")
+print(f"Model: {span.model} ({span.provider})")
+print(f"Status: {span.status}")
+print(f"Latency: {span.latency_ms}ms")
+print(f"Tokens: {span.input_tokens} + {span.output_tokens} = {span.total_tokens}")
+cost_str = f"${span.cost:.4f}" if span.cost else "N/A"
+print(f"Cost: {cost_str}")
+print(f"Tags: {', '.join(span.tags) or 'none'}")
+print(f"User ID: {span.user_id or 'N/A'}")
+print(f"Session ID: {span.session_id or 'N/A'}")
+print(f"Created: {span.created_at}")
+```
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode
+
+try:
+    span = client.spans.get("sp_abc123def456")
+except TraciaError as error:
+    if error.code == TraciaErrorCode.NOT_FOUND:
+        print("Span does not exist")
+```

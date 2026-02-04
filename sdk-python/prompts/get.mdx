@@ -1,0 +1,99 @@
+---
+title: Get Prompt
+description: Retrieve a single prompt with its content
+---
+
+```python
+prompt = client.prompts.get(slug)
+# Async
+prompt = await client.prompts.aget(slug)
+```
+
+Retrieve a single prompt by its slug, including the full content of its current version.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `str` | Yes | The prompt slug |
+
+## Response
+
+Returns a `Prompt` object.
+
+```python
+class Prompt(BaseModel):
+    id: str
+    slug: str
+    name: str
+    description: str | None
+    current_version: int           # alias: "currentVersion"
+    versions: list[PromptVersion]
+    created_at: datetime           # alias: "createdAt"
+    updated_at: datetime           # alias: "updatedAt"
+
+class PromptVersion(BaseModel):
+    version: int
+    messages: list[PromptMessage]
+    model: str
+    provider: LLMProvider
+    temperature: float | None
+    max_output_tokens: int | None  # alias: "maxOutputTokens"
+    top_p: float | None            # alias: "topP"
+    stop_sequences: list[str] | None  # alias: "stopSequences"
+    created_at: datetime           # alias: "createdAt"
+
+class PromptMessage(BaseModel):
+    role: Literal["system", "developer", "user", "assistant"]
+    content: str
+```
+
+## Examples
+
+### Basic Usage
+
+```python
+prompt = client.prompts.get("welcome-email")
+
+print(prompt.name)              # "Welcome Email"
+print(prompt.current_version)   # 3
+```
+
+### Accessing Content
+
+```python
+prompt = client.prompts.get("welcome-email")
+
+# Get the latest version's messages
+latest = prompt.versions[0] if prompt.versions else None
+if latest:
+    for message in latest.messages:
+        print(f"[{message.role}]: {message.content}")
+    # [system]: You are a helpful assistant...
+    # [user]: Write a welcome email for {{name}}...
+    print(f"Model: {latest.model}, Provider: {latest.provider}")
+```
+
+### Checking Model Configuration
+
+```python
+prompt = client.prompts.get("welcome-email")
+
+if prompt.versions:
+    latest = prompt.versions[0]
+    print(f"Model: {latest.model}")
+    print(f"Provider: {latest.provider}")
+    print(f"Temperature: {latest.temperature}")
+```
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode
+
+try:
+    prompt = client.prompts.get("welcome-email")
+except TraciaError as error:
+    if error.code == TraciaErrorCode.NOT_FOUND:
+        print("Prompt does not exist")
+```

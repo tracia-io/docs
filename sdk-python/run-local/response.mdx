@@ -1,0 +1,181 @@
+---
+title: Response
+description: RunLocalResult fields and token usage
+---
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+## RunLocalResult
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | `str` | The generated text response |
+| `span_id` | `str` | Unique span identifier (always generated, even if `send_trace=False`) |
+| `trace_id` | `str` | Trace identifier for grouping spans (auto-generated if not provided) |
+| `latency_ms` | `int` | Request latency in milliseconds |
+| `usage` | `TokenUsage` | Token usage breakdown |
+| `cost` | `float \| None` | Estimated cost in USD (calculated server-side) |
+| `provider` | `LLMProvider` | Provider that handled the request (`"openai"`, `"anthropic"`, `"google"`) |
+| `model` | `str` | Model used for generation |
+| `tool_calls` | `list[ToolCall]` | Tool calls made by the model |
+| `finish_reason` | `FinishReason` | Why the model stopped generating |
+| `message` | `LocalPromptMessage` | Full assistant message for multi-turn conversations |
+
+### TokenUsage
+
+```python
+class TokenUsage(BaseModel):
+    input_tokens: int       # alias: "inputTokens"
+    output_tokens: int      # alias: "outputTokens"
+    total_tokens: int       # alias: "totalTokens"
+```
+
+### ToolCall
+
+```python
+class ToolCall(BaseModel):
+    id: str
+    name: str
+    arguments: dict[str, Any]
+```
+
+### FinishReason
+
+```python
+FinishReason = Literal["stop", "max_tokens", "tool_calls"]
+```
+
+- `stop` - Model finished naturally
+- `max_tokens` - Hit the token limit
+- `tool_calls` - Model wants to call a tool
+
+## Accessing Response Fields
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is TypeScript?"},
+    ],
+    tags=["documentation"],
+)
+
+# Generated text
+print(result.text)
+# "TypeScript is a strongly typed programming language..."
+
+# Span ID for debugging
+print(f"Span ID: {result.span_id}")
+# "sp_a1b2c3d4e5f67890"
+
+# Performance metrics
+print(f"Latency: {result.latency_ms}ms")
+# "Latency: 1234ms"
+
+# Token usage
+print(f"Input tokens: {result.usage.input_tokens}")
+print(f"Output tokens: {result.usage.output_tokens}")
+print(f"Total tokens: {result.usage.total_tokens}")
+
+# Provider info
+print(f"Provider: {result.provider}")
+print(f"Model: {result.model}")
+```
+
+## Cost Tracking
+
+The `cost` field contains the estimated cost in USD, calculated server-side when the span is processed:
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a haiku."}],
+)
+
+if result.cost is not None:
+    print(f"Estimated cost: ${result.cost:.6f}")
+```
+
+<Note>
+  The `cost` field in the immediate response may be `None`. Accurate cost calculations are available in the Tracia dashboard after span processing.
+</Note>
+
+## Usage Patterns
+
+### Logging Metrics
+
+```python
+import json
+from datetime import datetime
+
+
+def run_with_logging(messages):
+    result = client.run_local(
+        model="gpt-4o",
+        messages=messages,
+        tags=["monitored"],
+    )
+
+    print(json.dumps({
+        "span_id": result.span_id,
+        "model": result.model,
+        "provider": result.provider,
+        "latency_ms": result.latency_ms,
+        "input_tokens": result.usage.input_tokens,
+        "output_tokens": result.usage.output_tokens,
+        "total_tokens": result.usage.total_tokens,
+        "timestamp": datetime.now().isoformat(),
+    }))
+
+    return result.text
+```
+
+### Token Budget Management
+
+```python
+MAX_TOKENS = 10000
+total_tokens_used = 0
+
+
+def run_with_budget(messages):
+    global total_tokens_used
+
+    if total_tokens_used >= MAX_TOKENS:
+        raise RuntimeError("Token budget exceeded")
+
+    result = client.run_local(
+        model="gpt-4o",
+        messages=messages,
+        max_output_tokens=min(500, MAX_TOKENS - total_tokens_used),
+    )
+
+    total_tokens_used += result.usage.total_tokens
+    print(f"Tokens remaining: {MAX_TOKENS - total_tokens_used}")
+
+    return result
+```
+
+## Type Imports
+
+Import the types for type checking:
+
+```python
+from tracia import Tracia, RunLocalResult, TokenUsage
+
+
+def process_result(client: Tracia) -> RunLocalResult:
+    return client.run_local(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello!"}],
+    )
+
+
+def log_usage(usage: TokenUsage) -> None:
+    print(f"Tokens: {usage.total_tokens}")
+```

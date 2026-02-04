@@ -1,0 +1,209 @@
+---
+title: Streaming
+description: Real-time streaming responses from LLM providers
+---
+
+Enable streaming to receive LLM responses as they're generated, providing a more responsive user experience.
+
+## Basic Streaming
+
+Set `stream=True` to get a `LocalStream` instead of a `RunLocalResult`:
+
+```python
+stream = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a short story about a robot."}],
+    stream=True,
+)
+
+# Span ID is available immediately
+print("Span:", stream.span_id)
+
+# Iterate to receive chunks as they arrive
+for chunk in stream:
+    print(chunk, end="")
+
+# Get final result with usage stats
+result = stream.result.result()
+print(f"\n\nTokens used: {result.usage.total_tokens}")
+```
+
+## LocalStream Interface
+
+When streaming, `run_local()` returns a `LocalStream` object:
+
+```python
+class LocalStream:
+    # Span ID available immediately (before any chunks arrive)
+    span_id: str
+
+    # Trace ID available immediately
+    trace_id: str
+
+    # Iterator yielding text chunks
+    def __iter__(self) -> Iterator[str]: ...
+
+    # Future that resolves to StreamResult after stream completes
+    result: Future[StreamResult]
+
+    # Abort the stream early
+    def abort(self) -> None: ...
+```
+
+## StreamResult
+
+After the stream completes, the `result` property holds a `Future[StreamResult]`. Call `.result()` on it to get the value:
+
+```python
+class StreamResult(RunLocalResult):
+    # Whether the stream was aborted
+    aborted: bool
+```
+
+```python
+# Access the final result after consuming the stream
+stream_result = stream.result.result()  # Future.result() → StreamResult
+print(f"Tokens: {stream_result.usage.total_tokens}")
+```
+
+## Async Streaming
+
+Use `arun_local()` with `stream=True` for async streaming:
+
+```python
+stream = await client.arun_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a short story about a robot."}],
+    stream=True,
+)
+
+async for chunk in stream:
+    print(chunk, end="")
+
+result = await stream.result
+print(f"\n\nTokens used: {result.usage.total_tokens}")
+```
+
+The async variant returns an `AsyncLocalStream` with the same interface but using `async for` instead of `for`. The `result` property returns an `asyncio.Future[StreamResult]`, so use `await` to get the value.
+
+## Aborting a Stream
+
+Use `abort()` to cancel a stream early:
+
+```python
+stream = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a very long essay..."}],
+    stream=True,
+)
+
+char_count = 0
+for chunk in stream:
+    print(chunk, end="")
+    char_count += len(chunk)
+
+    # Stop after 500 characters
+    if char_count > 500:
+        stream.abort()
+        break
+
+result = stream.result.result()
+print(f"\nAborted: {result.aborted}")  # True
+```
+
+## Streaming with Tool Calls
+
+Streaming works with tool calling. Tool calls are available in the final result:
+
+```python
+stream = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "What is the weather in Tokyo?"}],
+    stream=True,
+    tools=[{
+        "name": "get_weather",
+        "description": "Get current weather for a location",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string"},
+            },
+            "required": ["location"],
+        },
+    }],
+)
+
+# Text chunks still stream as normal
+for chunk in stream:
+    print(chunk, end="")
+
+result = stream.result.result()
+
+# Handle tool calls
+if result.finish_reason == "tool_calls":
+    tool_call = result.tool_calls[0]
+    weather_data = get_weather(tool_call.arguments["location"])
+
+    # Continue conversation with tool result
+    follow_up = client.run_local(
+        model="gpt-4o",
+        messages=[
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+            result.message,  # Assistant's message with tool calls
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "tool_name": tool_call.name,
+                "content": json.dumps(weather_data),
+            },
+        ],
+        stream=True,
+        tools=[...],  # same tools
+    )
+
+    for chunk in follow_up:
+        print(chunk, end="")
+```
+
+## Example: HTTP Streaming Response
+
+Stream directly to an HTTP response in Django:
+
+```python
+# Django view
+from django.http import StreamingHttpResponse
+
+def stream_view(request):
+    message = request.POST.get("message")
+
+    stream = client.run_local(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": message}],
+        stream=True,
+    )
+
+    def generate():
+        for chunk in stream:
+            yield chunk
+
+    return StreamingHttpResponse(generate(), content_type="text/plain")
+```
+
+## Provider Support
+
+Streaming is supported by all providers:
+
+| Provider | Streaming Support |
+|----------|------------------|
+| OpenAI | Full support |
+| Anthropic | Full support |
+| Google | Full support |
+
+## Spans and Streaming
+
+Spans are submitted after the stream completes (or is aborted):
+
+- The span includes the complete response text accumulated during streaming
+- Token usage is captured from the stream's final usage event
+- If aborted, the span records the partial response
+- Span submission is still non-blocking and asynchronous

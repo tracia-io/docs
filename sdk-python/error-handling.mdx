@@ -1,0 +1,189 @@
+---
+title: Error Handling
+description: Handle errors gracefully in your application
+---
+
+All API errors raise `TraciaError` with a specific error code.
+
+## Basic Error Handling
+
+```python
+from tracia import Tracia, TraciaError, TraciaErrorCode
+
+client = Tracia(api_key="tr_your_api_key")
+
+try:
+    result = client.prompts.run("welcome-email", {"name": "Alice"})
+    print(result.text)
+except TraciaError as error:
+    print(f"Error [{error.code}]: {error.message}")
+```
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| `UNAUTHORIZED` | Invalid or missing API key |
+| `NOT_FOUND` | The requested resource (prompt, etc.) does not exist |
+| `CONFLICT` | Resource already exists (e.g., duplicate slug) |
+| `MISSING_VARIABLES` | Required template variables are missing |
+| `MISSING_PROVIDER_API_KEY` | No provider API key provided (for `run_local()`) |
+| `MISSING_PROVIDER_SDK` | Required provider SDK (LiteLLM) not installed |
+| `UNSUPPORTED_MODEL` | Model not recognized, use `provider` override |
+| `PROVIDER_ERROR` | Error from the LLM provider (OpenAI, etc.) |
+| `INVALID_REQUEST` | Invalid request format |
+| `NETWORK_ERROR` | Network connectivity error |
+| `TIMEOUT` | Request timed out (default 2 minute limit) |
+| `ABORTED` | Request was aborted (e.g., stream aborted) |
+| `UNKNOWN` | Unknown or unmapped error |
+
+## Handling Specific Errors
+
+```python
+from tracia import Tracia, TraciaError, TraciaErrorCode
+
+client = Tracia(api_key="tr_your_api_key")
+
+try:
+    result = client.prompts.run("welcome-email", {"name": "Alice"})
+    print(result.text)
+except TraciaError as error:
+    if error.code == TraciaErrorCode.UNAUTHORIZED:
+        print("Invalid API key")
+    elif error.code == TraciaErrorCode.NOT_FOUND:
+        print("Prompt does not exist")
+    elif error.code == TraciaErrorCode.CONFLICT:
+        print("Resource already exists")
+    elif error.code == TraciaErrorCode.MISSING_VARIABLES:
+        print("Missing required template variables")
+    elif error.code == TraciaErrorCode.PROVIDER_ERROR:
+        print(f"LLM provider error: {error.message}")
+    elif error.code == TraciaErrorCode.NETWORK_ERROR:
+        print(f"Network error: {error.message}")
+    elif error.code == TraciaErrorCode.TIMEOUT:
+        print("Request timed out")
+    elif error.code == TraciaErrorCode.MISSING_PROVIDER_API_KEY:
+        print("Provider API key not set")
+    elif error.code == TraciaErrorCode.UNSUPPORTED_MODEL:
+        print("Model not recognized")
+    else:
+        print(f"Unknown error: {error.message}")
+```
+
+## Common Error Scenarios
+
+### Missing Variables
+
+When running a prompt that requires variables you didn't provide:
+
+```python
+# Prompt expects {{name}} and {{product}}
+result = client.prompts.run("welcome-email", {
+    "name": "Alice"
+    # Missing "product" variable
+})
+# Raises TraciaError with code MISSING_VARIABLES
+```
+
+### Provider Not Configured
+
+When no LLM provider API key is configured:
+
+```python
+result = client.prompts.run("welcome-email", {"name": "Alice"})
+# Raises TraciaError with code PROVIDER_ERROR
+# Message: "No OpenAI API key configured. Add one in Settings > Providers."
+```
+
+### Prompt Not Found
+
+When requesting a prompt that doesn't exist:
+
+```python
+prompt = client.prompts.get("nonexistent-prompt")
+# Raises TraciaError with code NOT_FOUND
+```
+
+## run_local() Errors
+
+The `run_local()` method has additional error codes specific to local execution.
+
+### Missing Provider API Key
+
+When no API key is found for the provider:
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+# Raises TraciaError with code MISSING_PROVIDER_API_KEY
+# Message: "Missing API key for openai. Set the OPENAI_API_KEY environment variable
+#           or provide provider_api_key in options."
+```
+
+**Solution:** Set the environment variable or provide `provider_api_key`:
+```python
+# Option 1: Environment variable
+# OPENAI_API_KEY=sk-your-key
+
+# Option 2: Explicit key
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+    provider_api_key="sk-your-key",
+)
+```
+
+### Unsupported Model
+
+When using a custom model without specifying the provider:
+
+```python
+result = client.run_local(
+    model="my-fine-tuned-model",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+# Raises TraciaError with code UNSUPPORTED_MODEL
+```
+
+**Solution:** Specify the provider explicitly:
+```python
+result = client.run_local(
+    model="my-fine-tuned-model",
+    provider="openai",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+## Retry Logic
+
+For transient errors like network issues or rate limits, implement retry logic:
+
+```python
+import time
+from tracia import Tracia, TraciaError, TraciaErrorCode
+
+client = Tracia(api_key="tr_your_api_key")
+
+NON_RETRYABLE = {
+    TraciaErrorCode.UNAUTHORIZED,
+    TraciaErrorCode.NOT_FOUND,
+    TraciaErrorCode.MISSING_VARIABLES,
+    TraciaErrorCode.INVALID_REQUEST,
+}
+
+
+def run_with_retry(slug: str, variables: dict[str, str], max_retries: int = 3):
+    for attempt in range(1, max_retries + 1):
+        try:
+            return client.prompts.run(slug, variables)
+        except TraciaError as error:
+            if error.code in NON_RETRYABLE:
+                raise
+            if attempt < max_retries:
+                delay = 2**attempt
+                time.sleep(delay)
+                continue
+            raise
+```

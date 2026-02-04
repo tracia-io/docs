@@ -1,0 +1,101 @@
+---
+title: Evaluate Span
+description: Submit evaluations for spans
+---
+
+```python
+evaluation = client.spans.evaluate(span_id, options)
+# Async
+evaluation = await client.spans.aevaluate(span_id, options)
+```
+
+Submit an evaluation for a span. Evaluations allow you to score spans, providing feedback on response quality.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `span_id` | `str` | Yes | The span ID to evaluate |
+| `options` | `EvaluateOptions` | Yes | Evaluation options |
+| `options.evaluator` | `str` | Yes | The evaluator key. Currently only `quality` is supported. |
+| `options.value` | `int \| float` | Yes | The evaluation score. Use `Eval.POSITIVE` (1) or `Eval.NEGATIVE` (0) |
+| `options.note` | `str` | No | Optional note explaining the evaluation |
+
+## Response
+
+```python
+class EvaluateResult(BaseModel):
+    id: str
+    evaluator_key: str       # alias: "evaluatorKey"
+    evaluator_name: str      # alias: "evaluatorName"
+    value: float
+    source: str
+    note: str | None
+    created_at: datetime     # alias: "createdAt"
+```
+
+## Examples
+
+### Binary Evaluation (Thumbs Up/Down)
+
+```python
+from tracia import Tracia, Eval, EvaluateOptions
+
+client = Tracia(api_key="tr_your_api_key")
+
+# Positive evaluation
+client.spans.evaluate(
+    "sp_abc123def456",
+    EvaluateOptions(evaluator="quality", value=Eval.POSITIVE),
+)
+
+# Negative evaluation
+client.spans.evaluate(
+    "sp_abc123def456",
+    EvaluateOptions(evaluator="quality", value=Eval.NEGATIVE),
+)
+```
+
+### Adding a Note
+
+```python
+client.spans.evaluate(
+    "sp_abc123def456",
+    EvaluateOptions(
+        evaluator="quality",
+        value=Eval.NEGATIVE,
+        note="Response was off-topic and did not address the user question",
+    ),
+)
+```
+
+### User Feedback Integration
+
+```python
+def submit_user_feedback(span_id: str, is_helpful: bool, comment: str | None = None):
+    client.spans.evaluate(
+        span_id,
+        EvaluateOptions(
+            evaluator="quality",
+            value=Eval.POSITIVE if is_helpful else Eval.NEGATIVE,
+            note=comment,
+        ),
+    )
+```
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode, Eval, EvaluateOptions
+
+try:
+    client.spans.evaluate(
+        "sp_abc123def456",
+        EvaluateOptions(evaluator="quality", value=Eval.POSITIVE),
+    )
+except TraciaError as error:
+    if error.code == TraciaErrorCode.NOT_FOUND:
+        print("Span not found")
+    elif error.code == TraciaErrorCode.INVALID_REQUEST:
+        print("Invalid evaluation value")
+```

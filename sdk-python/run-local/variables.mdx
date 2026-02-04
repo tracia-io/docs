@@ -1,0 +1,186 @@
+---
+title: Variables
+description: Template interpolation with double curly brace syntax
+---
+
+Use variables to inject dynamic content into your messages with `{{placeholder}}` syntax.
+
+## Basic Usage
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a {{role}}."},
+        {"role": "user", "content": "Help me with {{task}}."},
+    ],
+    variables={
+        "role": "helpful coding assistant",
+        "task": "writing a REST API",
+    },
+)
+```
+
+The messages sent to the LLM will be:
+- System: "You are a helpful coding assistant."
+- User: "Help me with writing a REST API."
+
+## Variable Syntax
+
+Variables use double curly braces: `{{variableName}}`
+
+- Variable names must contain only alphanumeric characters and underscores
+- Variables are case-sensitive
+- Undefined variables are left as-is (not replaced)
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Hello {{name}}, how is {{city}}?"},
+    ],
+    variables={
+        "name": "Alice",
+        # "city" is not provided
+    },
+)
+# Result: "Hello Alice, how is {{city}}?"
+```
+
+## Multi-Message Interpolation
+
+Variables are interpolated across all messages:
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are an expert in {{language}}."},
+        {"role": "user", "content": "How do I create a class in {{language}}?"},
+        {"role": "assistant", "content": "In {{language}}, you create a class using..."},
+        {"role": "user", "content": "Can you show me an example in {{language}}?"},
+    ],
+    variables={"language": "Python"},
+)
+```
+
+## Common Patterns
+
+### Personalized Responses
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are helping {{user_name}} with their {{project_type}} project."},
+        {"role": "user", "content": "{{user_question}}"},
+    ],
+    variables={
+        "user_name": "Alice",
+        "project_type": "e-commerce",
+        "user_question": "How should I structure the database?",
+    },
+)
+```
+
+### Dynamic Prompts from Configuration
+
+```python
+prompt_config = {
+    "system_prompt": "You are a {{tone}} assistant specializing in {{domain}}.",
+    "user_template": "Please {{action}} the following: {{content}}",
+}
+
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": prompt_config["system_prompt"]},
+        {"role": "user", "content": prompt_config["user_template"]},
+    ],
+    variables={
+        "tone": "friendly",
+        "domain": "web development",
+        "action": "review",
+        "content": user_input,
+    },
+)
+```
+
+### Locale-Based Content
+
+```python
+translations = {
+    "en": {"greeting": "Hello", "farewell": "Goodbye"},
+    "es": {"greeting": "Hola", "farewell": "Adiós"},
+    "fr": {"greeting": "Bonjour", "farewell": "Au revoir"},
+}
+
+locale = "es"
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": 'Respond using "{{greeting}}" and "{{farewell}}" appropriately.'},
+        {"role": "user", "content": "Greet the user and say bye."},
+    ],
+    variables=translations[locale],
+)
+```
+
+## Variables vs f-strings
+
+You might wonder why use Tracia variables instead of Python f-strings. The key difference is **traceability**.
+
+### With Variables (Recommended)
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Summarize {{topic}} for {{audience}}."},
+    ],
+    variables={
+        "topic": "machine learning",
+        "audience": "beginners",
+    },
+)
+# Span stores: interpolated messages + original variables
+# Variables are preserved for filtering and analysis
+```
+
+### With f-strings
+
+```python
+topic = "machine learning"
+audience = "beginners"
+
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": f"Summarize {topic} for {audience}."},
+    ],
+)
+# Span stores: only the final string
+# No way to filter by variable values
+```
+
+Using Tracia variables allows you to:
+- Filter spans by variable values in the dashboard
+- Analyze prompt performance across different inputs
+- Group spans by the variables used
+
+## Escaping Curly Braces
+
+If you need literal curly braces in your content, they won't be interpolated if they don't match the `{{word}}` pattern:
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "In Python, dicts use {key: value} syntax. My name is {{name}}."},
+    ],
+    variables={"name": "Alice"},
+)
+# Result: "In Python, dicts use {key: value} syntax. My name is Alice."
+```
+
+Single braces and braces with spaces inside are preserved as-is.

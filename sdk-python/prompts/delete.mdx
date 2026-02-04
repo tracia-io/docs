@@ -1,0 +1,91 @@
+---
+title: Delete Prompt
+description: Delete a prompt and all its versions
+---
+
+```python
+client.prompts.delete(slug)
+# Async
+await client.prompts.adelete(slug)
+```
+
+Permanently delete a prompt and all its versions.
+
+<Warning>
+  This action is irreversible. All versions of the prompt will be permanently deleted.
+</Warning>
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `str` | Yes | The prompt slug to delete |
+
+## Response
+
+Returns `None` on success.
+
+## Examples
+
+### Basic Usage
+
+```python
+client.prompts.delete("welcome-email")
+print("Prompt deleted")
+```
+
+### With Confirmation
+
+```python
+def delete_prompt_with_confirmation(slug: str):
+    # Get prompt details first
+    prompt = client.prompts.get(slug)
+
+    print(f"About to delete: {prompt.name}")
+    print(f"  - {prompt.current_version} version(s)")
+    print(f"  - Created: {prompt.created_at}")
+
+    # In a real app, you'd prompt for user confirmation here
+    confirmed = True
+
+    if confirmed:
+        client.prompts.delete(slug)
+        print("Deleted successfully")
+```
+
+### Bulk Delete
+
+```python
+def delete_all_prompts():
+    prompts = client.prompts.list()
+
+    for prompt in prompts:
+        client.prompts.delete(prompt.slug)
+        print(f"Deleted: {prompt.name}")
+```
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode
+
+try:
+    client.prompts.delete("welcome-email")
+except TraciaError as error:
+    if error.code == TraciaErrorCode.NOT_FOUND:
+        print("Prompt does not exist (may have already been deleted)")
+```
+
+### Idempotent Delete
+
+```python
+def safe_delete(slug: str) -> bool:
+    try:
+        client.prompts.delete(slug)
+        return True
+    except TraciaError as error:
+        if error.code == TraciaErrorCode.NOT_FOUND:
+            # Already deleted, treat as success
+            return True
+        raise
+```

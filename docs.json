@@ -64,6 +64,50 @@
               },
               "sdk-node/error-handling"
             ]
+          },
+          {
+            "group": "Python SDK",
+            "pages": [
+              "sdk-python/installation",
+              {
+                "group": "Prompts",
+                "pages": [
+                  "sdk-python/prompts",
+                  "sdk-python/prompts/run",
+                  "sdk-python/prompts/list",
+                  "sdk-python/prompts/get",
+                  "sdk-python/prompts/create",
+                  "sdk-python/prompts/update",
+                  "sdk-python/prompts/delete"
+                ]
+              },
+              {
+                "group": "Run Local",
+                "pages": [
+                  "sdk-python/run-local",
+                  "sdk-python/run-local/basic-usage",
+                  "sdk-python/run-local/streaming",
+                  "sdk-python/run-local/sessions",
+                  "sdk-python/run-local/parameters",
+                  "sdk-python/run-local/response",
+                  "sdk-python/run-local/providers",
+                  "sdk-python/run-local/models",
+                  "sdk-python/run-local/variables",
+                  "sdk-python/run-local/tracing",
+                  "sdk-python/run-local/advanced"
+                ]
+              },
+              {
+                "group": "Spans",
+                "pages": [
+                  "sdk-python/spans",
+                  "sdk-python/spans/list",
+                  "sdk-python/spans/get",
+                  "sdk-python/spans/evaluate"
+                ]
+              },
+              "sdk-python/error-handling"
+            ]
           }
         ]
       },

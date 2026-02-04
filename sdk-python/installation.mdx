@@ -1,0 +1,166 @@
+---
+title: Installation
+description: Install and configure the Tracia Python SDK
+---
+
+## Installation
+
+Install the Tracia SDK using pip:
+
+<CodeGroup>
+```bash pip
+pip install tracia
+```
+
+```bash poetry
+poetry add tracia
+```
+
+```bash uv
+uv add tracia
+```
+</CodeGroup>
+
+## Requirements
+
+- Python 3.10+
+- Dependencies: `httpx`, `pydantic`, `litellm`
+
+## Configuration
+
+Initialize the Tracia client with your API key:
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key_here")
+```
+
+### Configuration Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `api_key` | `str` | Yes | Your Tracia API key (starts with `tr_`) |
+| `base_url` | `str` | No | Override the API base URL (default: `https://app.tracia.io`) |
+| `on_span_error` | `Callable[[Exception, str], None]` | No | Callback for background span submission failures |
+
+### Environment Variables
+
+We recommend storing your API key in environment variables:
+
+```bash .env
+TRACIA_API_KEY=tr_your_api_key_here
+```
+
+```python
+import os
+from tracia import Tracia
+
+client = Tracia(api_key=os.environ["TRACIA_API_KEY"])
+```
+
+<Warning>
+  Never commit API keys to version control. Use environment variables or a secrets manager.
+</Warning>
+
+## Context Manager
+
+The SDK supports context managers for automatic resource cleanup:
+
+```python
+with Tracia(api_key="tr_your_api_key") as client:
+    result = client.run_local(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+    print(result.text)
+# Resources cleaned up automatically
+```
+
+### Async Context Manager
+
+```python
+async with Tracia(api_key="tr_your_api_key") as client:
+    result = await client.arun_local(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+    print(result.text)
+```
+
+## Async Support
+
+Every method has both sync and async variants. Async methods use the `a` prefix:
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+# Sync
+result = client.run_local(model="gpt-4o", messages=[...])
+prompts = client.prompts.list()
+
+# Async
+result = await client.arun_local(model="gpt-4o", messages=[...])
+prompts = await client.prompts.alist()
+```
+
+## Type Exports
+
+The SDK exports all types for type checking:
+
+```python
+from tracia import (
+    Tracia,
+    TraciaSession,
+    TraciaError,
+    TraciaErrorCode,
+    Eval,
+    # Streaming
+    LocalStream,
+    AsyncLocalStream,
+    # Core types
+    LLMProvider,
+    TokenUsage,
+    FinishReason,
+    # Message types
+    LocalPromptMessage,
+    ContentPart,
+    TextPart,
+    ToolCallPart,
+    # Tool types
+    ToolDefinition,
+    ToolCall,
+    ToolChoice,
+    # Run local types
+    RunLocalInput,
+    RunLocalResult,
+    StreamResult,
+    # Span types
+    Span,
+    ListSpansOptions,
+    ListSpansResult,
+    EvaluateOptions,
+    EvaluateResult,
+    # Prompt types
+    Prompt,
+    PromptListItem,
+    PromptMessage,
+    CreatePromptOptions,
+    UpdatePromptOptions,
+    RunOptions,
+    RunResult,
+)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Prompts SDK" icon="code" href="/sdk-python/prompts">
+    Manage and run prompts stored in Tracia
+  </Card>
+  <Card title="Run Local" icon="bolt" href="/sdk-python/run-local">
+    Execute prompts directly against LLM providers
+  </Card>
+</CardGroup>

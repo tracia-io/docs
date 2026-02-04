@@ -1,0 +1,124 @@
+---
+title: Overview
+description: SDK reference for prompt operations
+---
+
+All prompt operations are available under the `client.prompts` namespace. Every method has both sync and async variants (async methods use the `a` prefix).
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+# Run a prompt
+result = client.prompts.run("welcome-email", {"name": "Alice"})
+
+# List all prompts
+prompts = client.prompts.list()
+
+# Get a single prompt
+prompt = client.prompts.get("welcome-email")
+
+# Create a prompt
+from tracia import CreatePromptOptions, PromptMessage
+new_prompt = client.prompts.create(CreatePromptOptions(
+    slug="my-prompt",
+    name="My Prompt",
+    model="gpt-4o",
+    provider="openai",
+    messages=[PromptMessage(role="user", content="Hello {{name}}")],
+))
+
+# Update a prompt
+from tracia import UpdatePromptOptions
+updated = client.prompts.update("welcome-email", UpdatePromptOptions(name="New Name"))
+
+# Delete a prompt
+client.prompts.delete("welcome-email")
+```
+
+## Async Variants
+
+```python
+result = await client.prompts.arun("welcome-email", {"name": "Alice"})
+prompts = await client.prompts.alist()
+prompt = await client.prompts.aget("welcome-email")
+new_prompt = await client.prompts.acreate(CreatePromptOptions(...))
+updated = await client.prompts.aupdate("welcome-email", UpdatePromptOptions(...))
+await client.prompts.adelete("welcome-email")
+```
+
+## Available Methods
+
+<CardGroup cols={2}>
+  <Card title="Run" icon="play" href="/sdk-python/prompts/run">
+    Execute a prompt and get the LLM response
+  </Card>
+  <Card title="List" icon="list" href="/sdk-python/prompts/list">
+    Get all prompts for your account
+  </Card>
+  <Card title="Get" icon="eye" href="/sdk-python/prompts/get">
+    Retrieve a single prompt with its content
+  </Card>
+  <Card title="Create" icon="plus" href="/sdk-python/prompts/create">
+    Create a new prompt
+  </Card>
+  <Card title="Update" icon="pen" href="/sdk-python/prompts/update">
+    Update an existing prompt
+  </Card>
+  <Card title="Delete" icon="trash" href="/sdk-python/prompts/delete">
+    Delete a prompt and all its versions
+  </Card>
+</CardGroup>
+
+## Types
+
+### Prompt
+
+```python
+class Prompt(BaseModel):
+    id: str
+    slug: str
+    name: str
+    description: str | None
+    current_version: int           # alias: "currentVersion"
+    versions: list[PromptVersion]
+    created_at: datetime           # alias: "createdAt"
+    updated_at: datetime           # alias: "updatedAt"
+```
+
+### PromptVersion
+
+```python
+class PromptVersion(BaseModel):
+    version: int
+    messages: list[PromptMessage]
+    model: str
+    provider: LLMProvider
+    temperature: float | None
+    max_output_tokens: int | None  # alias: "maxOutputTokens"
+    top_p: float | None            # alias: "topP"
+    stop_sequences: list[str] | None  # alias: "stopSequences"
+    created_at: datetime           # alias: "createdAt"
+```
+
+### PromptMessage
+
+```python
+class PromptMessage(BaseModel):
+    role: Literal["system", "developer", "user", "assistant"]
+    content: str
+```
+
+### PromptListItem
+
+```python
+class PromptListItem(BaseModel):
+    id: str
+    slug: str
+    name: str
+    description: str | None
+    current_version: int           # alias: "currentVersion"
+    created_at: datetime           # alias: "createdAt"
+    updated_at: datetime           # alias: "updatedAt"
+```

@@ -1,0 +1,296 @@
+---
+title: Parameters
+description: Complete run_local() parameter reference
+---
+
+```python
+result = client.run_local(**kwargs)
+# Async
+result = await client.arun_local(**kwargs)
+```
+
+## Required Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `messages` | `list[LocalPromptMessage]` | Messages to send to the LLM |
+| `model` | `str` | Model identifier (e.g., `gpt-4o`, `claude-sonnet-4-20250514`) |
+
+### LocalPromptMessage
+
+```python
+class LocalPromptMessage(BaseModel):
+    role: Literal["system", "developer", "user", "assistant", "tool"]
+    content: str | list[ContentPart]
+    tool_call_id: str | None = None  # Required for "tool" role
+    tool_name: str | None = None     # Required for "tool" role
+
+# Content parts for assistant messages with tool calls
+ContentPart = TextPart | ToolCallPart
+
+class TextPart(BaseModel):
+    type: Literal["text"]
+    text: str
+
+class ToolCallPart(BaseModel):
+    type: Literal["tool_call"]
+    id: str
+    name: str
+    arguments: dict[str, Any]
+```
+
+## Streaming
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `stream` | `bool` | `False` | When `True`, returns `LocalStream` instead of `RunLocalResult` |
+
+### Streaming Example
+
+```python
+stream = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a story."}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk, end="")
+
+result = stream.result.result()  # Future[StreamResult] → StreamResult
+```
+
+See [Streaming](/sdk-python/run-local/streaming) for more details.
+
+## LLM Configuration
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `temperature` | `float` | Provider default | Controls randomness (0-2 for OpenAI/Google, 0-1 for Anthropic) |
+| `max_output_tokens` | `int` | Provider default | Maximum tokens to generate |
+| `top_p` | `float` | Provider default | Nucleus sampling threshold |
+| `stop_sequences` | `list[str]` | `None` | Stop generation when these sequences appear |
+| `timeout_ms` | `int` | `120000` | Timeout in milliseconds for the LLM call (default 2 minutes) |
+
+### Example
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a poem."}],
+    temperature=0.9,
+    max_output_tokens=500,
+    top_p=0.95,
+    stop_sequences=["---", "THE END"],
+    timeout_ms=30000,
+)
+```
+
+## Tool Calling
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `tools` | `list[ToolDefinition]` | `None` | Available tools/functions the model can call |
+| `tool_choice` | `ToolChoice` | `None` | Control which tools the model can use |
+
+### ToolDefinition
+
+```python
+class ToolDefinition(BaseModel):
+    name: str
+    description: str
+    parameters: ToolParameters
+
+class ToolParameters(BaseModel):
+    type: Literal["object"] = "object"
+    properties: dict[str, JsonSchemaProperty]
+    required: list[str] | None = None
+```
+
+<Note>
+  You can also pass plain dicts for tools — they will be validated against the schema.
+</Note>
+
+### ToolChoice
+
+```python
+ToolChoice = Literal["auto", "none", "required"] | dict  # {"tool": "name"}
+```
+
+- `"auto"` - Model decides whether to use tools
+- `"none"` - Model cannot use tools
+- `"required"` - Model must use a tool
+- `{"tool": "name"}` - Model must use the specified tool
+
+### Tool Calling Example
+
+```python
+import json
+
+# Step 1: Initial request with tools
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "What is the weather in Tokyo?"}],
+    tools=[{
+        "name": "get_weather",
+        "description": "Get current weather for a location",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string", "description": "City name"},
+            },
+            "required": ["location"],
+        },
+    }],
+    tool_choice="auto",
+)
+
+# Step 2: Handle tool calls
+if result.finish_reason == "tool_calls":
+    tool_call = result.tool_calls[0]
+
+    # Execute your tool
+    weather_data = get_weather(tool_call.arguments["location"])
+
+    # Step 3: Continue with tool result
+    follow_up = client.run_local(
+        model="gpt-4o",
+        messages=[
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+            result.message,  # Assistant's message (includes tool calls)
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "tool_name": tool_call.name,
+                "content": json.dumps(weather_data),
+            },
+        ],
+        tools=[...],  # same tools
+    )
+
+    print(follow_up.text)  # "The weather in Tokyo is 22°C and sunny."
+```
+
+## Provider Configuration
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `provider` | `"openai" \| "anthropic" \| "google"` | Auto-detected | Override provider detection for custom models |
+| `provider_api_key` | `str` | Environment variable | Override the default API key |
+
+### Provider Override
+
+Use `provider` when using a model not in the built-in list:
+
+```python
+result = client.run_local(
+    model="my-fine-tuned-gpt4",
+    provider="openai",  # Required for custom models
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
+
+### Custom API Key
+
+Override the environment variable API key:
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+    provider_api_key="sk-different-key-for-this-request",
+)
+```
+
+## Variable Interpolation
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `variables` | `dict[str, str]` | `None` | Variables for `{{placeholder}}` interpolation |
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You help with {{topic}}."},
+        {"role": "user", "content": "Explain {{concept}} to a {{audience}}."},
+    ],
+    variables={
+        "topic": "programming",
+        "concept": "recursion",
+        "audience": "beginner",
+    },
+)
+```
+
+See [Variables](/sdk-python/run-local/variables) for more details.
+
+## Span Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `tags` | `list[str]` | `None` | Tags for filtering spans in the dashboard |
+| `user_id` | `str` | `None` | End user identifier |
+| `session_id` | `str` | `None` | Session identifier for grouping spans |
+| `send_trace` | `bool` | `True` | Whether to send the span to Tracia |
+| `span_id` | `str` | Auto-generated | Custom span ID (must match `sp_` + 16 hex chars) |
+| `trace_id` | `str` | `None` | Group related spans together (session ID) |
+| `parent_span_id` | `str` | `None` | Link to parent span (creates a chain) |
+
+### Example
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+    tags=["production", "chat"],
+    user_id="user_123",
+    session_id="session_abc",
+    span_id="sp_1234567890abcdef",
+)
+```
+
+### Disabling Tracing
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+    send_trace=False,
+)
+
+# span_id is still generated locally, but the span is NOT submitted to the Tracia API
+print(result.span_id)  # "sp_..." (still populated)
+```
+
+See [Tracing](/sdk-python/run-local/tracing) for more details.
+
+## Complete Example
+
+```python
+result = client.run_local(
+    # Required
+    model="claude-sonnet-4-20250514",
+    messages=[
+        {"role": "system", "content": "You are a {{role}}."},
+        {"role": "user", "content": "{{question}}"},
+    ],
+    # LLM configuration
+    temperature=0.7,
+    max_output_tokens=1000,
+    top_p=0.9,
+    stop_sequences=["---"],
+    timeout_ms=60000,
+    # Provider configuration
+    provider_api_key=os.environ["ANTHROPIC_API_KEY_PROD"],
+    # Variables
+    variables={
+        "role": "helpful assistant",
+        "question": "What is the meaning of life?",
+    },
+    # Tracing
+    tags=["production", "philosophy"],
+    user_id="user_123",
+    session_id="session_abc",
+)
+```

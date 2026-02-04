@@ -1,0 +1,122 @@
+---
+title: Update Prompt
+description: Update an existing prompt
+---
+
+```python
+prompt = client.prompts.update(slug, options)
+# Async
+prompt = await client.prompts.aupdate(slug, options)
+```
+
+Update an existing prompt's metadata or content. If the messages change, a new version is automatically created.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `str` | Yes | The prompt slug to update |
+| `options` | `UpdatePromptOptions` | Yes | Update options object |
+| `options.name` | `str` | No | New display name |
+| `options.description` | `str` | No | New description |
+| `options.messages` | `list[PromptMessage]` | No | New messages (creates new version) |
+| `options.model` | `str` | No | New default model |
+| `options.provider` | `LLMProvider` | No | New provider |
+| `options.temperature` | `float` | No | New default temperature |
+| `options.max_output_tokens` | `int` | No | New max output tokens |
+| `options.top_p` | `float` | No | New top-p value |
+| `options.stop_sequences` | `list[str]` | No | New stop sequences |
+
+## Response
+
+Returns the updated `Prompt` object with the new version number if messages changed.
+
+## Examples
+
+### Update Metadata Only
+
+```python
+from tracia import UpdatePromptOptions
+
+prompt = client.prompts.update("welcome-email", UpdatePromptOptions(
+    name="Welcome Email v2",
+    description="Updated welcome email template",
+))
+
+# Version stays the same when only metadata changes
+print(prompt.current_version)  # 1
+```
+
+### Update Messages (Creates New Version)
+
+```python
+from tracia import UpdatePromptOptions, PromptMessage
+
+prompt = client.prompts.update("welcome-email", UpdatePromptOptions(
+    messages=[
+        PromptMessage(role="system", content="You write friendly, casual emails."),
+        PromptMessage(role="user", content="Write a welcome email for {{name}} at {{company}}."),
+    ],
+))
+
+# Version incremented because messages changed
+print(prompt.current_version)  # 2
+```
+
+### Update Model and Provider
+
+```python
+prompt = client.prompts.update("welcome-email", UpdatePromptOptions(
+    model="claude-sonnet-4-20250514",
+    provider="anthropic",
+    temperature=0.8,
+))
+```
+
+## Versioning Behavior
+
+<Note>
+  Message changes automatically create a new version. This allows you to track changes over time and see which version was used for each span.
+</Note>
+
+```python
+from tracia import CreatePromptOptions, UpdatePromptOptions, PromptMessage
+
+# Version 1: Original messages
+v1 = client.prompts.create(CreatePromptOptions(
+    slug="my-prompt",
+    name="My Prompt",
+    model="gpt-4o",
+    provider="openai",
+    messages=[PromptMessage(role="user", content="Hello {{name}}")],
+))
+print(v1.current_version)  # 1
+
+# Version 2: Updated messages
+v2 = client.prompts.update("my-prompt", UpdatePromptOptions(
+    messages=[PromptMessage(role="user", content="Hi {{name}}!")],
+))
+print(v2.current_version)  # 2
+
+# Metadata update: No new version
+v2b = client.prompts.update("my-prompt", UpdatePromptOptions(
+    name="My Updated Prompt",
+))
+print(v2b.current_version)  # Still 2
+```
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode
+
+try:
+    prompt = client.prompts.update("welcome-email", UpdatePromptOptions(
+        name="New Name",
+    ))
+except TraciaError as error:
+    if error.code == TraciaErrorCode.NOT_FOUND:
+        print("Prompt does not exist")
+    elif error.code == TraciaErrorCode.INVALID_REQUEST:
+        print("Invalid request")
+```

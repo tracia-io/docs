@@ -1,0 +1,287 @@
+---
+title: Overview
+description: Execute LLM prompts directly against providers with automatic tracing
+---
+
+The `run_local()` method lets you execute prompts directly against OpenAI, Anthropic, or Google while keeping your prompts in your codebase. You get full observability through Tracia without any added latency.
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"},
+    ],
+)
+
+print(result.text)
+```
+
+## Why run_local()?
+
+Some teams prefer managing prompts in their codebase rather than in an external dashboard. This keeps prompts:
+- Version-controlled with your application code
+- Reviewed through your standard PR process
+- Deployed alongside the code that uses them
+- Constructed programmatically when needed
+
+`run_local()` gives you full Tracia observability while respecting this workflow.
+
+## How It Works
+
+When you call `run_local()`, the SDK:
+
+1. **Calls the provider via LiteLLM** - Your request goes to OpenAI, Anthropic, or Google through LiteLLM. Tracia is not in the request path.
+
+2. **Sends the trace asynchronously** - After the LLM responds, trace data is sent to Tracia in the background. This is non-blocking and adds zero latency to your application.
+
+| | `prompts.run()` | `run_local()` |
+|---|---|---|
+| **Prompts stored in** | Tracia dashboard | Your codebase |
+| **LLM call routed through** | Tracia API | Direct to provider via LiteLLM |
+| **Trace creation** | Automatic (server-side) | Async, non-blocking |
+
+## When to Use run_local() vs prompts.run()
+
+**Use `run_local()` when you want to:**
+- Keep prompts in your codebase, version-controlled with git
+- Build prompts programmatically (e.g., assembling messages based on context)
+- Prototype quickly without dashboard setup
+- Use Tracia purely for observability
+
+**Use `prompts.run()` when you want to:**
+- Edit prompts without code deployments
+- A/B test prompt versions from the dashboard
+- Let non-engineers manage prompt content
+- Track prompt versions separately from code versions
+
+| Use Case | Recommended Method |
+|----------|--------|
+| Prompts managed in Tracia dashboard | `prompts.run()` |
+| Prompts defined in code | `run_local()` |
+| Prompts reviewed in PRs | `run_local()` |
+| Quick prototyping | `run_local()` |
+| A/B testing prompt versions | `prompts.run()` |
+| Programmatically constructed prompts | `run_local()` |
+| Non-technical prompt editors | `prompts.run()` |
+
+## Quick Examples
+
+<CodeGroup>
+```python OpenAI
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Explain quantum computing in simple terms."}
+    ],
+    temperature=0.7,
+)
+```
+
+```python Anthropic
+result = client.run_local(
+    model="claude-sonnet-4-20250514",
+    messages=[
+        {"role": "user", "content": "Write a haiku about programming."}
+    ],
+    max_output_tokens=100,
+)
+```
+
+```python Google
+result = client.run_local(
+    model="gemini-2.0-flash",
+    messages=[
+        {"role": "user", "content": "What are the benefits of Python?"}
+    ],
+)
+```
+
+```python Streaming
+stream = client.run_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a poem"}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk, end="")
+
+result = stream.result.result()  # Future[StreamResult] → StreamResult
+print(f"Tokens: {result.usage.total_tokens}")
+```
+</CodeGroup>
+
+## Async Variants
+
+Use `arun_local()` for async code:
+
+```python
+result = await client.arun_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+# Async streaming
+stream = await client.arun_local(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a poem"}],
+    stream=True,
+)
+
+async for chunk in stream:
+    print(chunk, end="")
+```
+
+## Available Methods
+
+<CardGroup cols={2}>
+  <Card title="Basic Usage" icon="play" href="/sdk-python/run-local/basic-usage">
+    Getting started with each provider
+  </Card>
+  <Card title="Streaming" icon="bolt" href="/sdk-python/run-local/streaming">
+    Real-time streaming responses
+  </Card>
+  <Card title="Sessions" icon="link" href="/sdk-python/run-local/sessions">
+    Automatic trace chaining for multi-turn
+  </Card>
+  <Card title="Parameters" icon="sliders" href="/sdk-python/run-local/parameters">
+    Complete run_local() parameter reference
+  </Card>
+  <Card title="Response" icon="arrow-right-from-bracket" href="/sdk-python/run-local/response">
+    RunLocalResult fields and usage
+  </Card>
+  <Card title="Providers" icon="plug" href="/sdk-python/run-local/providers">
+    OpenAI, Anthropic, Google setup
+  </Card>
+  <Card title="Models" icon="microchip" href="/sdk-python/run-local/models">
+    94+ supported models by provider
+  </Card>
+  <Card title="Variables" icon="code" href="/sdk-python/run-local/variables">
+    Template interpolation syntax
+  </Card>
+  <Card title="Tracing" icon="chart-line" href="/sdk-python/run-local/tracing">
+    Background traces, flush(), error handling
+  </Card>
+  <Card title="Advanced" icon="gear" href="/sdk-python/run-local/advanced">
+    Error handling, concurrent requests
+  </Card>
+</CardGroup>
+
+## Types
+
+### LLMProvider
+
+```python
+class LLMProvider(str, Enum):
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    GOOGLE = "google"
+```
+
+### RunLocalInput
+
+```python
+class RunLocalInput(BaseModel):
+    # Required
+    messages: list[LocalPromptMessage]
+    model: str
+
+    # Streaming
+    stream: bool = False
+
+    # Provider override (for custom/new models)
+    provider: LLMProvider | None = None
+
+    # LLM configuration
+    temperature: float | None = None
+    max_output_tokens: int | None = None   # alias: "maxOutputTokens"
+    top_p: float | None = None             # alias: "topP"
+    stop_sequences: list[str] | None = None  # alias: "stopSequences"
+    timeout_ms: int | None = None          # alias: "timeoutMs"
+
+    # Tool calling
+    tools: list[ToolDefinition] | None = None
+    tool_choice: ToolChoice | None = None  # alias: "toolChoice"
+
+    # Variable interpolation
+    variables: dict[str, str] | None = None
+
+    # Provider API key override
+    provider_api_key: str | None = None    # alias: "providerApiKey"
+
+    # Span options
+    tags: list[str] | None = None
+    user_id: str | None = None             # alias: "userId"
+    session_id: str | None = None          # alias: "sessionId"
+    send_trace: bool | None = None         # alias: "sendTrace"
+    span_id: str | None = None             # alias: "spanId"
+    trace_id: str | None = None            # alias: "traceId"
+    parent_span_id: str | None = None      # alias: "parentSpanId"
+```
+
+### RunLocalResult
+
+```python
+class RunLocalResult(BaseModel):
+    text: str
+    span_id: str              # alias: "spanId"
+    trace_id: str             # alias: "traceId"
+    latency_ms: int           # alias: "latencyMs"
+    usage: TokenUsage
+    cost: float | None
+    provider: LLMProvider
+    model: str
+    tool_calls: list[ToolCall]  # alias: "toolCalls"
+    finish_reason: FinishReason  # alias: "finishReason"
+    message: LocalPromptMessage
+```
+
+### LocalStream
+
+When `stream=True` is set, `run_local()` returns a `LocalStream`:
+
+```python
+class LocalStream:
+    # Span ID available immediately
+    span_id: str
+
+    # Trace ID (always present)
+    trace_id: str
+
+    # Iterate to receive text chunks
+    def __iter__(self) -> Iterator[str]: ...
+
+    # Final result after stream completes (call .result() on the Future)
+    result: Future[StreamResult]
+
+    # Cancel the stream
+    def abort(self) -> None: ...
+```
+
+### LocalPromptMessage
+
+```python
+class LocalPromptMessage(BaseModel):
+    role: Literal["system", "developer", "user", "assistant", "tool"]
+    content: str | list[ContentPart]
+    tool_call_id: str | None = None   # alias: "toolCallId", required for "tool" role
+    tool_name: str | None = None      # alias: "toolName", required for "tool" role
+
+# Content parts for assistant messages with tool calls
+ContentPart = TextPart | ToolCallPart
+
+class TextPart(BaseModel):
+    type: Literal["text"]
+    text: str
+
+class ToolCallPart(BaseModel):
+    type: Literal["tool_call"]
+    id: str
+    name: str
+    arguments: dict[str, Any]
+```

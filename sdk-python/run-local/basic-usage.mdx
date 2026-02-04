@@ -1,0 +1,178 @@
+---
+title: Basic Usage
+description: Getting started with run_local() for each provider
+---
+
+## Prerequisites
+
+Install the Tracia SDK:
+
+```bash
+pip install tracia
+```
+
+Set your API keys as environment variables:
+
+```bash .env
+TRACIA_API_KEY=tr_your_tracia_key
+OPENAI_API_KEY=sk-your-openai-key
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
+GOOGLE_API_KEY=your_google_key
+```
+
+<Note>
+  The Python SDK uses LiteLLM under the hood. LiteLLM is included as a dependency and handles all provider communication.
+</Note>
+
+## OpenAI
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a helpful coding assistant."},
+        {"role": "user", "content": "Write a function to reverse a string in Python."},
+    ],
+    temperature=0.7,
+    max_output_tokens=500,
+)
+
+print(result.text)
+print(f"Tokens used: {result.usage.total_tokens}")
+```
+
+## Anthropic
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+result = client.run_local(
+    model="claude-sonnet-4-20250514",
+    messages=[
+        {"role": "system", "content": "You are a creative writing assistant."},
+        {"role": "user", "content": "Write a short story opening about a time traveler."},
+    ],
+    temperature=0.9,
+    max_output_tokens=1000,
+)
+
+print(result.text)
+print(f"Provider: {result.provider}")
+```
+
+## Google
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+result = client.run_local(
+    model="gemini-2.0-flash",
+    messages=[
+        {"role": "user", "content": "Explain the difference between HTTP and HTTPS."},
+    ],
+    temperature=0.5,
+)
+
+print(result.text)
+print(f"Latency: {result.latency_ms}ms")
+```
+
+## Multi-Turn Conversations
+
+Include previous messages to maintain conversation context:
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a math tutor."},
+        {"role": "user", "content": "What is 15% of 80?"},
+        {"role": "assistant", "content": "15% of 80 is 12."},
+        {"role": "user", "content": "How did you calculate that?"},
+    ],
+)
+```
+
+## With Tracing Metadata
+
+Add tags and user identifiers for filtering in the Tracia dashboard:
+
+```python
+result = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Summarize the key points of agile development."},
+    ],
+    tags=["production", "summarization"],
+    user_id="user_abc123",
+    session_id="session_xyz789",
+)
+
+print(f"Span ID: {result.span_id}")
+# View this span in the Tracia dashboard
+```
+
+## Streaming
+
+Enable streaming to receive responses in real-time:
+
+```python
+stream = client.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Write a short poem about coding."},
+    ],
+    stream=True,
+)
+
+# Span ID is available immediately
+print(f"Span: {stream.span_id}")
+
+# Iterate to receive chunks
+for chunk in stream:
+    print(chunk, end="")
+
+# Get final result with usage stats
+result = stream.result.result()  # Future[StreamResult] → StreamResult
+print(f"\nTokens: {result.usage.total_tokens}")
+```
+
+See [Streaming](/sdk-python/run-local/streaming) for more details.
+
+## Async Usage
+
+Use `arun_local()` for async contexts:
+
+```python
+result = await client.arun_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Hello!"},
+    ],
+)
+print(result.text)
+```
+
+## Without Tracing
+
+Disable tracing when you don't need observability:
+
+```python
+result = client.run_local(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "user", "content": "What is 2 + 2?"},
+    ],
+    send_trace=False,
+)
+
+print(result.span_id)  # "sp_..." (still populated, just not sent to Tracia)
+```

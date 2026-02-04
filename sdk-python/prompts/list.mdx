@@ -1,0 +1,71 @@
+---
+title: List Prompts
+description: Get all prompts for your account
+---
+
+```python
+prompts = client.prompts.list()
+# Async
+prompts = await client.prompts.alist()
+```
+
+Retrieve all prompts associated with your account, ordered by most recently updated.
+
+## Parameters
+
+This method takes no parameters.
+
+## Response
+
+Returns a list of `PromptListItem` objects.
+
+```python
+class PromptListItem(BaseModel):
+    id: str
+    slug: str
+    name: str
+    description: str | None
+    current_version: int        # alias: "currentVersion"
+    created_at: datetime         # alias: "createdAt"
+    updated_at: datetime         # alias: "updatedAt"
+```
+
+## Examples
+
+### Basic Usage
+
+```python
+prompts = client.prompts.list()
+print(f"Found {len(prompts)} prompts")
+```
+
+### Iterating Over Prompts
+
+```python
+prompts = client.prompts.list()
+
+for prompt in prompts:
+    print(f"{prompt.name} ({prompt.slug}) - v{prompt.current_version}")
+    print(f"  Updated: {prompt.updated_at}")
+```
+
+### Filtering Prompts
+
+```python
+prompts = client.prompts.list()
+
+# Find prompts by name
+email_prompts = [p for p in prompts if "email" in p.name.lower()]
+```
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode
+
+try:
+    prompts = client.prompts.list()
+except TraciaError as error:
+    if error.code == TraciaErrorCode.UNAUTHORIZED:
+        print("Invalid API key")
+```

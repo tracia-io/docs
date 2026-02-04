@@ -1,0 +1,103 @@
+---
+title: Run Prompt
+description: Execute a prompt and get the LLM response
+---
+
+```python
+result = client.prompts.run(slug, variables?, options?)
+# Async
+result = await client.prompts.arun(slug, variables?, options?)
+```
+
+Execute a prompt with variable substitution and get the generated response. Tracia handles template rendering, LLM API calls, and automatically logs a span.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `slug` | `str` | Yes | The prompt slug |
+| `variables` | `dict[str, str]` | No | Template variables |
+| `options` | `RunOptions` | No | Additional options |
+| `options.model` | `str` | No | Override the default model |
+| `options.tags` | `list[str]` | No | Tags for filtering spans |
+| `options.user_id` | `str` | No | End user identifier |
+| `options.session_id` | `str` | No | Session identifier |
+
+## Response
+
+```python
+class RunResult(BaseModel):
+    text: str                  # The generated text
+    span_id: str               # Unique span identifier
+    trace_id: str              # Session ID (same as span_id if not part of session)
+    prompt_version: int        # Version of the prompt used
+    latency_ms: int            # Request latency in milliseconds
+    usage: TokenUsage
+    cost: float                # Cost in USD
+```
+
+## Examples
+
+### Basic Usage
+
+```python
+result = client.prompts.run("welcome-email", {
+    "name": "Alice",
+    "product": "Tracia",
+})
+
+print(result.text)
+# "Dear Alice, Welcome to Tracia!..."
+```
+
+### With Options
+
+```python
+from tracia import RunOptions
+
+result = client.prompts.run(
+    "welcome-email",
+    {"name": "Alice", "product": "Tracia"},
+    RunOptions(
+        model="gpt-4",
+        tags=["onboarding", "email"],
+        user_id="user_123",
+        session_id="session_abc",
+    ),
+)
+```
+
+### Accessing Metadata
+
+```python
+result = client.prompts.run("welcome-email", {"name": "Alice"})
+
+print(f"Latency: {result.latency_ms}ms")
+print(f"Tokens: {result.usage.total_tokens}")
+print(f"Cost: ${result.cost:.4f}")
+print(f"Span ID: {result.span_id}")
+print(f"Prompt Version: {result.prompt_version}")
+```
+
+### Async Usage
+
+```python
+result = await client.prompts.arun("welcome-email", {"name": "Alice"})
+print(result.text)
+```
+
+## Error Handling
+
+```python
+from tracia import TraciaError, TraciaErrorCode
+
+try:
+    result = client.prompts.run("welcome-email", {"name": "Alice"})
+except TraciaError as error:
+    if error.code == TraciaErrorCode.NOT_FOUND:
+        print("Prompt does not exist")
+    elif error.code == TraciaErrorCode.MISSING_VARIABLES:
+        print("Missing required variables")
+    elif error.code == TraciaErrorCode.PROVIDER_ERROR:
+        print(f"LLM provider error: {error.message}")
+```
