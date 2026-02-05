@@ -27,13 +27,16 @@ Execute a prompt with variable substitution and get the generated response. Trac
 
 ```python
 class RunResult(BaseModel):
-    text: str                  # The generated text
+    text: str | None           # The generated text (None when only tool calls)
     span_id: str               # Unique span identifier
-    trace_id: str              # Session ID (same as span_id if not part of session)
+    trace_id: str              # Trace identifier for session grouping
     prompt_version: int        # Version of the prompt used
     latency_ms: int            # Request latency in milliseconds
     usage: TokenUsage
     cost: float                # Cost in USD
+    finish_reason: FinishReason | None  # Why the model stopped ("stop", "length", "tool_calls")
+    tool_calls: list[ToolCall] | None   # Tool calls made by the model
+    structured_output: dict | None      # Structured output when using JSON schema
 ```
 
 ## Examples

@@ -31,10 +31,12 @@ Pass a `ListSpansOptions` object:
 
 ```python
 class ListSpansResult(BaseModel):
-    spans: list[Span]
+    spans: list[SpanListItem]
     cursor: str | None
     has_more: bool              # alias: "hasMore"
 ```
+
+The list endpoint returns `SpanListItem` objects with reduced fields (no `input`, `output`, `variables`, `error`, `tags`). Use `spans.get(span_id)` to fetch the full `Span` detail.
 
 ## Examples
 

@@ -17,11 +17,11 @@ Pass a `CreatePromptOptions` object:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `slug` | `str` | Yes | URL-friendly identifier |
 | `name` | `str` | Yes | Display name for the prompt |
-| `messages` | `list[PromptMessage]` | Yes | Array of messages |
-| `model` | `str` | Yes | Default model (e.g., `gpt-4o`) |
-| `provider` | `LLMProvider` | Yes | Provider (`"openai"`, `"anthropic"`, `"google"`) |
+| `content` | `list[PromptMessage]` | Yes | Array of messages |
+| `slug` | `str` | No | URL-friendly identifier (auto-generated from name if omitted) |
+| `model` | `str` | No | Default model (e.g., `gpt-4o`) |
+| `provider` | `LLMProvider` | No | Provider (`"openai"`, `"anthropic"`, `"google"`) |
 | `description` | `str` | No | Description of the prompt |
 | `temperature` | `float` | No | Default temperature |
 | `max_output_tokens` | `int` | No | Default max output tokens |
@@ -32,6 +32,7 @@ Pass a `CreatePromptOptions` object:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| `id` | `str` | Yes | Unique message identifier |
 | `role` | `str` | Yes | `system`, `developer`, `user`, or `assistant` |
 | `content` | `str` | Yes | Message content (supports `{{variables}}`) |
 
@@ -47,13 +48,11 @@ Returns the created `Prompt` object.
 from tracia import CreatePromptOptions, PromptMessage
 
 prompt = client.prompts.create(CreatePromptOptions(
-    slug="welcome-email",
     name="Welcome Email",
-    model="gpt-4o",
-    provider="openai",
-    messages=[
-        PromptMessage(role="system", content="You are a helpful assistant."),
-        PromptMessage(role="user", content="Write a welcome email for {{name}}."),
+    slug="welcome-email",
+    content=[
+        PromptMessage(id="msg_1", role="system", content="You are a helpful assistant."),
+        PromptMessage(id="msg_2", role="user", content="Write a welcome email for {{name}}."),
     ],
 ))
 
@@ -64,15 +63,15 @@ print(prompt.slug)  # "welcome-email"
 
 ```python
 prompt = client.prompts.create(CreatePromptOptions(
-    slug="onboarding-welcome",
     name="Welcome Email",
+    slug="onboarding-welcome",
     description="Sent to new users after signup",
     model="gpt-4o",
     provider="openai",
     temperature=0.7,
-    messages=[
-        PromptMessage(role="system", content="You write professional emails."),
-        PromptMessage(role="user", content="Write a welcome email for {{name}} at {{company}}."),
+    content=[
+        PromptMessage(id="msg_1", role="system", content="You write professional emails."),
+        PromptMessage(id="msg_2", role="user", content="Write a welcome email for {{name}} at {{company}}."),
     ],
 ))
 ```
@@ -81,24 +80,28 @@ prompt = client.prompts.create(CreatePromptOptions(
 
 ```python
 prompt = client.prompts.create(CreatePromptOptions(
-    slug="code-review",
     name="Code Review Assistant",
+    slug="code-review",
     model="claude-sonnet-4-20250514",
     provider="anthropic",
-    messages=[
+    content=[
         PromptMessage(
+            id="msg_1",
             role="system",
             content="You are a senior software engineer conducting code reviews.",
         ),
         PromptMessage(
+            id="msg_2",
             role="user",
             content="Please review this {{language}} code:\n\n{{code}}",
         ),
         PromptMessage(
+            id="msg_3",
             role="assistant",
             content="I'll review this code for correctness, performance, and best practices.",
         ),
         PromptMessage(
+            id="msg_4",
             role="user",
             content="Focus especially on {{focus_area}}.",
         ),
@@ -117,11 +120,9 @@ from tracia import TraciaError, TraciaErrorCode
 
 try:
     prompt = client.prompts.create(CreatePromptOptions(
-        slug="welcome-email",
         name="Welcome Email",
-        model="gpt-4o",
-        provider="openai",
-        messages=[...],
+        slug="welcome-email",
+        content=[...],
     ))
 except TraciaError as error:
     if error.code == TraciaErrorCode.CONFLICT:
