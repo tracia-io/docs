@@ -5,12 +5,31 @@ description: Automatic span chaining for multi-turn conversations
 
 Sessions provide automatic span linking for multi-turn conversations. Each call in a session is automatically connected to previous calls, making it easy to visualize conversation flows in the Tracia dashboard.
 
-## Basic Usage
+## Creating a Session
 
 ```python
 from tracia import Tracia
 
 client = Tracia(api_key="tr_your_api_key")
+
+# Start a new session
+session = client.create_session()
+
+# Or continue an existing trace (e.g., across HTTP requests)
+session = client.create_session(
+    trace_id="tr_existing_trace_id",
+    parent_span_id="sp_last_span_id",  # optional: chain from a specific span
+)
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `trace_id` | `str` | Continue an existing trace instead of creating a new one |
+| `parent_span_id` | `str` | Chain from a specific span in the existing trace |
+
+## Basic Usage
+
+```python
 session = client.create_session()
 
 # First call - creates the session (trace)
@@ -102,6 +121,35 @@ Clears session state to start a new trace:
 ```python
 session.reset()
 # Next call will start a new trace session
+```
+
+## Continuing Existing Traces
+
+Use `create_session` with a `trace_id` to continue a trace across requests or services:
+
+```python
+# Django view - continue a trace from a previous request
+def chat(request):
+    data = json.loads(request.body)
+    message = data["message"]
+    trace_id = data.get("trace_id")
+    last_span_id = data.get("last_span_id")
+
+    session = client.create_session(
+        trace_id=trace_id,              # Continue the same trace
+        parent_span_id=last_span_id,    # Chain from the last span
+    )
+
+    result = session.run_local(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": message}],
+    )
+
+    return JsonResponse({
+        "text": result.text,
+        "trace_id": session.trace_id,
+        "last_span_id": result.span_id,
+    })
 ```
 
 ## Manual Span Linking

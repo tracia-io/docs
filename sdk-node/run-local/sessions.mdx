@@ -5,12 +5,31 @@ description: Automatic span chaining for multi-turn conversations
 
 Sessions provide automatic span linking for multi-turn conversations. Each call in a session is automatically connected to previous calls, making it easy to visualize conversation flows in the Tracia dashboard.
 
-## Basic Usage
+## Creating a Session
 
 ```typescript
 import { Tracia } from 'tracia';
 
 const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+// Start a new session
+const session = tracia.createSession();
+
+// Or continue an existing trace (e.g., across HTTP requests)
+const session = tracia.createSession({
+  traceId: 'tr_existing_trace_id',
+  parentSpanId: 'sp_last_span_id',  // optional: chain from a specific span
+});
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `traceId` | `string` | Continue an existing trace instead of creating a new one |
+| `parentSpanId` | `string` | Chain from a specific span in the existing trace |
+
+## Basic Usage
+
+```typescript
 const session = tracia.createSession();
 
 // First call - creates the session (trace)
@@ -109,6 +128,33 @@ Clears session state to start a new trace:
 ```typescript
 session.reset();
 // Next call will start a new trace session
+```
+
+## Continuing Existing Traces
+
+Use `createSession` with a `traceId` to continue a trace across requests or services:
+
+```typescript
+// API handler - continue a trace from a previous request
+app.post('/chat', async (req, res) => {
+  const { message, traceId, lastSpanId } = req.body;
+
+  const session = tracia.createSession({
+    traceId,             // Continue the same trace
+    parentSpanId: lastSpanId,  // Chain from the last span
+  });
+
+  const result = await session.runLocal({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: message }],
+  });
+
+  res.json({
+    text: result.text,
+    traceId: session.getTraceId(),
+    lastSpanId: result.spanId,
+  });
+});
 ```
 
 ## Manual Span Linking
