@@ -549,6 +549,28 @@ paths:
                   cost:
                     type: number
                     description: Estimated cost in USD
+                  finishReason:
+                    type: string
+                    enum: [stop, max_tokens, tool_calls]
+                    nullable: true
+                    description: Why the model stopped generating
+                  toolCalls:
+                    type: array
+                    nullable: true
+                    description: Tool calls made by the model
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        arguments:
+                          type: object
+                  structuredOutput:
+                    type: object
+                    nullable: true
+                    description: Parsed JSON when the prompt has an output schema configured
         '400':
           description: Bad request (missing variables or provider key)
           content:

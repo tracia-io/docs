@@ -85,6 +85,29 @@ Run a prompt with variable substitution and get the generated response. This end
   Estimated cost in USD
 </ResponseField>
 
+<ResponseField name="finishReason" type="string">
+  Why the model stopped generating: `stop`, `max_tokens`, or `tool_calls`
+</ResponseField>
+
+<ResponseField name="toolCalls" type="array">
+  Tool calls made by the model (when the prompt has tools configured)
+  <Expandable title="ToolCall object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the tool call
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Name of the tool called
+    </ResponseField>
+    <ResponseField name="arguments" type="object">
+      Arguments passed to the tool
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="structuredOutput" type="object">
+  Parsed JSON object when the prompt has an output schema configured. The output conforms to the JSON schema defined in the prompt settings.
+</ResponseField>
+
 <RequestExample>
 ```bash cURL
 curl -X POST https://app.tracia.io/api/v1/prompts/welcome-email/run \
@@ -124,7 +147,32 @@ const result = await tracia.prompts.run('welcome-email', {
     "outputTokens": 120,
     "totalTokens": 165
   },
-  "cost": 0.0049
+  "cost": 0.0049,
+  "finishReason": "stop",
+  "toolCalls": null,
+  "structuredOutput": null
+}
+```
+
+```json 200 Structured Output
+{
+  "text": "{\"sentiment\": \"positive\", \"confidence\": 0.95}",
+  "spanId": "sp_def456uvw",
+  "traceId": "tr_session789",
+  "promptVersion": 2,
+  "latencyMs": 890,
+  "usage": {
+    "inputTokens": 60,
+    "outputTokens": 25,
+    "totalTokens": 85
+  },
+  "cost": 0.0012,
+  "finishReason": "stop",
+  "toolCalls": null,
+  "structuredOutput": {
+    "sentiment": "positive",
+    "confidence": 0.95
+  }
 }
 ```
 

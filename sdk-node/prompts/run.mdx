@@ -26,17 +26,20 @@ Execute a prompt with variable substitution and get the generated response. Trac
 
 ```typescript
 interface RunResult {
-  text: string;           // The generated text
-  spanId: string;         // Unique span identifier
-  traceId: string;        // Session ID (same as spanId if not part of session)
-  promptVersion: number;  // Version of the prompt used
-  latencyMs: number;      // Request latency in milliseconds
+  text: string;                        // The generated text
+  spanId: string;                      // Unique span identifier
+  traceId: string;                     // Trace ID for session grouping
+  promptVersion: number;               // Version of the prompt used
+  latencyMs: number;                   // Request latency in milliseconds
   usage: {
     inputTokens: number;
     outputTokens: number;
     totalTokens: number;
   };
-  cost: number;           // Cost in USD
+  cost: number;                        // Cost in USD
+  finishReason?: FinishReason;         // Why the model stopped ("stop", "max_tokens", "tool_calls")
+  toolCalls?: ToolCall[];              // Tool calls made by the model
+  structuredOutput?: Record<string, unknown>;  // Parsed JSON when prompt has an output schema
 }
 ```
 
