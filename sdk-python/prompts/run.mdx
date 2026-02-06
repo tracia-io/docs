@@ -22,6 +22,9 @@ Execute a prompt with variable substitution and get the generated response. Trac
 | `options.tags` | `list[str]` | No | Tags for filtering spans |
 | `options.user_id` | `str` | No | End user identifier |
 | `options.session_id` | `str` | No | Session identifier |
+| `options.trace_id` | `str` | No | Group related spans together (session) |
+| `options.parent_span_id` | `str` | No | Link to parent span |
+| `options.messages` | `list[LocalPromptMessage]` | No | Full conversation messages for multi-turn (skips template rendering) |
 
 ## Response
 
@@ -37,6 +40,7 @@ class RunResult(BaseModel):
     finish_reason: FinishReason | None  # Why the model stopped ("stop", "length", "tool_calls")
     tool_calls: list[ToolCall] | None   # Tool calls made by the model
     structured_output: dict | None      # Structured output when using JSON schema
+    messages: list[LocalPromptMessage] | None  # Full conversation for multi-turn continuation
 ```
 
 ## Examples
@@ -87,6 +91,63 @@ print(f"Prompt Version: {result.prompt_version}")
 ```python
 result = await client.prompts.arun("welcome-email", {"name": "Alice"})
 print(result.text)
+```
+
+### Multi-Turn Tool Calling
+
+When a prompt has tools configured, the model may return `tool_calls` instead of text. Use `messages` to continue the conversation with tool results.
+
+```python
+import json
+from tracia import RunOptions, LocalPromptMessage
+
+# 1. First call — model returns tool calls
+result = client.prompts.run("assistant", {"question": "Weather in Tokyo?"})
+
+if result.finish_reason == "tool_calls" and result.tool_calls:
+    # 2. Execute tools locally
+    weather_data = get_weather(result.tool_calls[0].arguments["location"])
+
+    # 3. Continue with tool results
+    result2 = client.prompts.run(
+        "assistant",
+        None,
+        RunOptions(
+            messages=[
+                *result.messages,
+                LocalPromptMessage(
+                    role="tool",
+                    tool_call_id=result.tool_calls[0].id,
+                    tool_name="get_weather",
+                    content=json.dumps(weather_data),
+                ),
+            ],
+            trace_id=result.trace_id,
+            parent_span_id=result.span_id,
+        ),
+    )
+
+    print(result2.text)
+    # "The weather in Tokyo is 22°C and sunny."
+```
+
+### Trace Grouping
+
+Use `trace_id` and `parent_span_id` to group related runs in the dashboard.
+
+```python
+from tracia import RunOptions
+
+result1 = client.prompts.run("step-1", {"input": "data"})
+
+result2 = client.prompts.run(
+    "step-2",
+    {"input": result1.text},
+    RunOptions(
+        trace_id=result1.trace_id,
+        parent_span_id=result1.span_id,
+    ),
+)
 ```
 
 ## Error Handling

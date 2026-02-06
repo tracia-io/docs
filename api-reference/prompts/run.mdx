@@ -41,7 +41,11 @@ Run a prompt with variable substitution and get the generated response. This end
 </ParamField>
 
 <ParamField body="parentSpanId" type="string">
-  Link to parent span (creates a chain)
+  Link to parent span (creates a chain). When provided without `traceId`, the trace ID is inherited from the parent span.
+</ParamField>
+
+<ParamField body="messages" type="array">
+  Full conversation messages for multi-turn tool calling. When provided, template rendering is skipped and these messages are sent directly to the LLM. Each message has `role` (system/developer/user/assistant/tool), `content`, and optionally `toolCallId`/`toolName` for tool result messages.
 </ParamField>
 
 ## Response
@@ -106,6 +110,10 @@ Run a prompt with variable substitution and get the generated response. This end
 
 <ResponseField name="structuredOutput" type="object">
   Parsed JSON object when the prompt has an output schema configured. The output conforms to the JSON schema defined in the prompt settings.
+</ResponseField>
+
+<ResponseField name="messages" type="array">
+  Full conversation messages (rendered input + assistant response) for multi-turn continuation. Pass these back in the next request's `messages` field to continue the conversation.
 </ResponseField>
 
 <RequestExample>

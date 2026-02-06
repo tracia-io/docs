@@ -21,6 +21,7 @@ Execute a prompt with variable substitution and get the generated response. Trac
 | `options.sessionId` | `string` | No | Session identifier |
 | `options.traceId` | `string` | No | Group related spans together (session) |
 | `options.parentSpanId` | `string` | No | Link to parent span |
+| `options.messages` | `LocalPromptMessage[]` | No | Full conversation messages for multi-turn (skips template rendering) |
 
 ## Response
 
@@ -40,6 +41,7 @@ interface RunResult {
   finishReason?: FinishReason;         // Why the model stopped ("stop", "max_tokens", "tool_calls")
   toolCalls?: ToolCall[];              // Tool calls made by the model
   structuredOutput?: Record<string, unknown>;  // Parsed JSON when prompt has an output schema
+  messages?: LocalPromptMessage[];     // Full conversation for multi-turn continuation
 }
 ```
 
@@ -82,6 +84,46 @@ console.log(`Tokens: ${result.usage.totalTokens}`);
 console.log(`Cost: $${result.cost.toFixed(4)}`);
 console.log(`Span ID: ${result.spanId}`);
 console.log(`Prompt Version: ${result.promptVersion}`);
+```
+
+### Multi-Turn Tool Calling
+
+When a prompt has tools configured, the model may return `tool_calls` instead of text. Use `messages` to continue the conversation with tool results.
+
+```typescript
+// 1. First call — model returns tool calls
+const result = await tracia.prompts.run('assistant', { question: 'Weather in Tokyo?' });
+
+if (result.finishReason === 'tool_calls' && result.toolCalls) {
+  // 2. Execute tools locally
+  const weatherData = await getWeather(result.toolCalls[0].arguments.location);
+
+  // 3. Continue with tool results
+  const result2 = await tracia.prompts.run('assistant', undefined, {
+    messages: [
+      ...result.messages!,
+      { role: 'tool', toolCallId: result.toolCalls[0].id, toolName: 'get_weather', content: JSON.stringify(weatherData) }
+    ],
+    traceId: result.traceId,
+    parentSpanId: result.spanId,
+  });
+
+  console.log(result2.text);
+  // "The weather in Tokyo is 22°C and sunny."
+}
+```
+
+### Trace Grouping
+
+Use `traceId` and `parentSpanId` to group related runs in the dashboard.
+
+```typescript
+const result1 = await tracia.prompts.run('step-1', { input: 'data' });
+
+const result2 = await tracia.prompts.run('step-2', { input: result1.text }, {
+  traceId: result1.traceId,
+  parentSpanId: result1.spanId,
+});
 ```
 
 ## Error Handling
