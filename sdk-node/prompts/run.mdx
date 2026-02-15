@@ -16,6 +16,7 @@ Execute a prompt with variable substitution and get the generated response. Trac
 | `slug` | `string` | Yes | The prompt slug |
 | `variables` | `Record<string, string>` | No | Template variables |
 | `options.model` | `string` | No | Override the default model |
+| `options.version` | `number` | No | Run a specific prompt version (uses latest if omitted) |
 | `options.tags` | `string[]` | No | Tags for filtering spans |
 | `options.userId` | `string` | No | End user identifier |
 | `options.sessionId` | `string` | No | Session identifier |
@@ -72,6 +73,20 @@ const result = await tracia.prompts.run(
     sessionId: 'session_abc'
   }
 );
+```
+
+### Pinning a Version
+
+Run a specific prompt version instead of the latest. Useful for production deployments where you want to lock a known-good version while continuing to iterate on the prompt.
+
+```typescript
+const result = await tracia.prompts.run(
+  'welcome-email',
+  { name: 'Alice', product: 'Tracia' },
+  { version: 3 }
+);
+
+console.log(result.promptVersion); // 3
 ```
 
 ### Accessing Metadata

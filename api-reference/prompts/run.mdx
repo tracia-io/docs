@@ -24,6 +24,10 @@ Run a prompt with variable substitution and get the generated response. This end
   Override the default model (e.g., `gpt-4o`, `claude-sonnet-4-20250514`)
 </ParamField>
 
+<ParamField body="version" type="integer">
+  Run a specific prompt version. If omitted, the latest version is used. Useful for pinning a known-good version in production.
+</ParamField>
+
 <ParamField body="tags" type="string[]">
   Tags for filtering spans in the dashboard
 </ParamField>

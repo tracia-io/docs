@@ -497,6 +497,9 @@ paths:
                 model:
                   type: string
                   description: Override the default model (e.g., `gpt-4o`, `claude-sonnet-4-20250514`)
+                version:
+                  type: integer
+                  description: Run a specific prompt version (uses latest if omitted)
                 tags:
                   type: array
                   items:
