@@ -46,6 +46,7 @@
                   "sdk-node/run-local/parameters",
                   "sdk-node/run-local/response",
                   "sdk-node/run-local/providers",
+                  "sdk-node/run-local/bedrock",
                   "sdk-node/run-local/models",
                   "sdk-node/run-local/variables",
                   "sdk-node/run-local/tracing",
