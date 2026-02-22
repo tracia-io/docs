@@ -21,7 +21,7 @@ interface PromptListItem {
   slug: string;
   name: string;
   description: string | null;
-  provider: 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | null;
+  provider: 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | 'AMAZON_BEDROCK' | null;
   model: string | null;
   temperature: number | null;
   topP: number | null;

@@ -20,7 +20,7 @@ result = client.run_local(
 | `latency_ms` | `int` | Request latency in milliseconds |
 | `usage` | `TokenUsage` | Token usage breakdown |
 | `cost` | `float \| None` | Estimated cost in USD (calculated server-side) |
-| `provider` | `LLMProvider` | Provider that handled the request (`"openai"`, `"anthropic"`, `"google"`) |
+| `provider` | `LLMProvider` | Provider that handled the request (`"openai"`, `"anthropic"`, `"google"`, `"amazon_bedrock"`) |
 | `model` | `str` | Model used for generation |
 | `tool_calls` | `list[ToolCall]` | Tool calls made by the model |
 | `finish_reason` | `FinishReason` | Why the model stopped generating |

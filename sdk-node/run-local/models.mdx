@@ -167,6 +167,31 @@ The SDK automatically detects the provider based on the model name. Below is the
 | `gemini-3-pro-preview` | Gemini 3 Pro preview |
 | `gemini-3-flash-preview` | Gemini 3 Flash preview |
 
+## Amazon Bedrock
+
+Bedrock hosts models from multiple vendors. Use the full Bedrock model ID. See the [Bedrock page](/sdk-node/run-local/bedrock) for setup and usage details.
+
+### Amazon Nova
+| Model | Description |
+|-------|-------------|
+| `amazon.nova-micro-v1:0` | Amazon Nova Micro |
+| `amazon.nova-lite-v1:0` | Amazon Nova Lite |
+| `amazon.nova-pro-v1:0` | Amazon Nova Pro |
+
+### Anthropic Claude (via Bedrock)
+| Model | Description |
+|-------|-------------|
+| `anthropic.claude-haiku-4-5-20251001-v1:0` | Claude 4.5 Haiku |
+| `anthropic.claude-sonnet-4-20250514-v1:0` | Claude 4 Sonnet |
+| `anthropic.claude-sonnet-4-5-20250929-v1:0` | Claude 4.5 Sonnet |
+| `anthropic.claude-opus-4-5-20251101-v1:0` | Claude 4.5 Opus |
+| `anthropic.claude-opus-4-6-v1` | Claude 4.6 Opus |
+
+### Mistral (via Bedrock)
+| Model | Description |
+|-------|-------------|
+| `mistral.pixtral-large-2502-v1:0` | Pixtral Large |
+
 ## Using Custom Models
 
 For models not in the built-in list (fine-tuned, preview, or new releases), specify the provider explicitly:

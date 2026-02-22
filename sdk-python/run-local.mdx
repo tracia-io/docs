@@ -3,7 +3,7 @@ title: Overview
 description: Execute LLM prompts directly against providers with automatic tracing
 ---
 
-The `run_local()` method lets you execute prompts directly against OpenAI, Anthropic, or Google while keeping your prompts in your codebase. You get full observability through Tracia without any added latency.
+The `run_local()` method lets you execute prompts directly against OpenAI, Anthropic, Google, or Amazon Bedrock while keeping your prompts in your codebase. You get full observability through Tracia without any added latency.
 
 ```python
 from tracia import Tracia
@@ -35,7 +35,7 @@ Some teams prefer managing prompts in their codebase rather than in an external 
 
 When you call `run_local()`, the SDK:
 
-1. **Calls the provider via LiteLLM** - Your request goes to OpenAI, Anthropic, or Google through LiteLLM. Tracia is not in the request path.
+1. **Calls the provider via LiteLLM** - Your request goes to OpenAI, Anthropic, Google, or Amazon Bedrock through LiteLLM. Tracia is not in the request path.
 
 2. **Sends the trace asynchronously** - After the LLM responds, trace data is sent to Tracia in the background. This is non-blocking and adds zero latency to your application.
 
@@ -101,6 +101,15 @@ result = client.run_local(
 )
 ```
 
+```python Amazon Bedrock
+result = client.run_local(
+    model="amazon.nova-lite-v1:0",
+    messages=[
+        {"role": "user", "content": "What are the benefits of cloud computing?"}
+    ],
+)
+```
+
 ```python Streaming
 stream = client.run_local(
     model="gpt-4o",
@@ -156,7 +165,7 @@ async for chunk in stream:
     RunLocalResult fields and usage
   </Card>
   <Card title="Providers" icon="plug" href="/sdk-python/run-local/providers">
-    OpenAI, Anthropic, Google setup
+    OpenAI, Anthropic, Google, Bedrock setup
   </Card>
   <Card title="Models" icon="microchip" href="/sdk-python/run-local/models">
     94+ supported models by provider
@@ -181,6 +190,7 @@ class LLMProvider(str, Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
+    AMAZON_BEDROCK = "amazon_bedrock"
 ```
 
 ### RunLocalInput

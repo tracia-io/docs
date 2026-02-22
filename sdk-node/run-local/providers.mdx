@@ -1,6 +1,6 @@
 ---
 title: Providers
-description: OpenAI, Anthropic, and Google provider setup and configuration
+description: OpenAI, Anthropic, Google, and Amazon Bedrock provider setup and configuration
 ---
 
 Tracia uses the [Vercel AI SDK](https://sdk.vercel.ai/docs) under the hood. Install only the providers you need.
@@ -14,9 +14,10 @@ Install the core AI SDK package plus your provider(s):
 npm install ai
 
 # Provider packages (install the ones you need)
-npm install @ai-sdk/openai    # For OpenAI models
-npm install @ai-sdk/anthropic # For Anthropic models
-npm install @ai-sdk/google    # For Google models
+npm install @ai-sdk/openai          # For OpenAI models
+npm install @ai-sdk/anthropic       # For Anthropic models
+npm install @ai-sdk/google          # For Google models
+npm install @ai-sdk/amazon-bedrock  # For Amazon Bedrock models
 ```
 
 ## OpenAI
@@ -187,11 +188,15 @@ try {
 
 ## Provider Comparison
 
-| Feature | OpenAI | Anthropic | Google |
-|---------|--------|-----------|--------|
-| System messages | Native support | Native support | Converted internally |
-| Temperature range | 0-2 | 0-1 | 0-2 |
-| Max output tokens | Model-dependent | Model-dependent | Model-dependent |
-| Stop sequences | Supported | Supported | Supported |
-| Streaming | Supported | Supported | Supported |
-| Tool calling | Supported | Supported | Supported |
+| Feature | OpenAI | Anthropic | Google | Amazon Bedrock |
+|---------|--------|-----------|--------|----------------|
+| System messages | Native support | Native support | Converted internally | Vendor-dependent |
+| Temperature range | 0-2 | 0-1 | 0-2 | Vendor-dependent |
+| Max output tokens | Model-dependent | Model-dependent | Model-dependent | Model-dependent |
+| Stop sequences | Supported | Supported | Supported | Supported |
+| Streaming | Supported | Supported | Supported | Supported |
+| Tool calling | Supported | Supported | Supported | Model-dependent |
+
+<Note>
+  Amazon Bedrock hosts models from multiple vendors (Amazon, Anthropic, Meta, Mistral, etc.). Feature support depends on the specific model. See the [Bedrock page](/sdk-node/run-local/bedrock) for details.
+</Note>

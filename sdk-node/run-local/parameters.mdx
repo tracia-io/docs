@@ -69,7 +69,7 @@ See [Streaming](/sdk-node/run-local/streaming) for more details.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `temperature` | `number` | Provider default | Controls randomness (0-2 for OpenAI/Google, 0-1 for Anthropic) |
+| `temperature` | `number` | Provider default | Controls randomness (0-2 for OpenAI/Google, 0-1 for Anthropic, vendor-dependent for Bedrock) |
 | `maxOutputTokens` | `number` | Provider default | Maximum tokens to generate |
 | `topP` | `number` | Provider default | Nucleus sampling threshold |
 | `stopSequences` | `string[]` | `undefined` | Stop generation when these sequences appear |
@@ -168,7 +168,7 @@ if (result.finishReason === 'tool_calls') {
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `provider` | `'openai' \| 'anthropic' \| 'google'` | Auto-detected | Override provider detection for custom models |
+| `provider` | `'openai' \| 'anthropic' \| 'google' \| 'amazon_bedrock'` | Auto-detected | Override provider detection for custom models |
 | `providerApiKey` | `string` | Environment variable | Override the default API key |
 | `customOptions` | `Partial<Record<LLMProvider, Record<string, unknown>>>` | `undefined` | Provider-specific options passed to the AI SDK, namespaced by provider |
 

@@ -106,7 +106,7 @@ console.log(`Prompt Version: ${result.promptVersion}`);
 When a prompt has tools configured, the model may return `tool_calls` instead of text. Use `messages` to continue the conversation with tool results.
 
 ```typescript
-// 1. First call — model returns tool calls
+// 1. First call - model returns tool calls
 const result = await tracia.prompts.run('assistant', { question: 'Weather in Tokyo?' });
 
 if (result.finishReason === 'tool_calls' && result.toolCalls) {

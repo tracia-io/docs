@@ -101,7 +101,7 @@ When a prompt has tools configured, the model may return `tool_calls` instead of
 import json
 from tracia import RunOptions, LocalPromptMessage
 
-# 1. First call — model returns tool calls
+# 1. First call - model returns tool calls
 result = client.prompts.run("assistant", {"question": "Weather in Tokyo?"})
 
 if result.finish_reason == "tool_calls" and result.tool_calls:

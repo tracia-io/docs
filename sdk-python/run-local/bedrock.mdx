@@ -1,0 +1,103 @@
+---
+title: Amazon Bedrock
+description: Use Amazon Bedrock models with Tracia
+---
+
+Tracia supports Amazon Bedrock via [LiteLLM](https://docs.litellm.ai/docs/providers/bedrock). No additional provider packages are needed. LiteLLM is included as a dependency.
+
+## Installation
+
+```bash
+pip install tracia
+```
+
+## Environment Variables
+
+Set your AWS credentials:
+
+```bash
+AWS_ACCESS_KEY_ID=your-access-key-id
+AWS_SECRET_ACCESS_KEY=your-secret-access-key
+AWS_REGION=us-east-1
+```
+
+## Usage
+
+Bedrock hosts models from multiple vendors. Use the full Bedrock model ID:
+
+### Amazon Nova
+
+```python
+result = client.run_local(
+    model="amazon.nova-lite-v1:0",
+    messages=[
+        {"role": "user", "content": "What are the benefits of cloud computing?"}
+    ],
+    temperature=0.7,
+    max_output_tokens=500,
+)
+```
+
+### Anthropic Claude (via Bedrock)
+
+```python
+result = client.run_local(
+    model="anthropic.claude-sonnet-4-5-20250929-v1:0",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain quantum computing."},
+    ],
+    temperature=0.7,
+    max_output_tokens=1000,
+)
+```
+
+### Meta Llama (via Bedrock)
+
+```python
+result = client.run_local(
+    model="meta.llama4-scout-17b-instruct-v1:0",
+    messages=[
+        {"role": "user", "content": "Write a haiku about programming."}
+    ],
+)
+```
+
+## Streaming
+
+```python
+stream = client.run_local(
+    model="amazon.nova-lite-v1:0",
+    messages=[{"role": "user", "content": "Write a poem about the cloud."}],
+    stream=True,
+)
+
+for chunk in stream:
+    print(chunk, end="")
+```
+
+## Async Usage
+
+```python
+result = await client.arun_local(
+    model="amazon.nova-lite-v1:0",
+    messages=[
+        {"role": "user", "content": "What are the benefits of cloud computing?"}
+    ],
+)
+```
+
+## Available Models
+
+Bedrock provides access to models from multiple vendors:
+
+| Vendor | Example Model ID | Description |
+|--------|-----------------|-------------|
+| Amazon | `amazon.nova-lite-v1:0` | Amazon's Nova family |
+| Anthropic | `anthropic.claude-sonnet-4-5-20250929-v1:0` | Claude models via Bedrock |
+| Meta | `meta.llama4-scout-17b-instruct-v1:0` | Llama models via Bedrock |
+| Mistral | `mistral.mistral-large-3-675b-instruct` | Mistral models via Bedrock |
+| DeepSeek | `deepseek.v3-v1:0` | DeepSeek models via Bedrock |
+| Cohere | `cohere.command-r-plus-v1:0` | Cohere models via Bedrock |
+
+See the [AWS Bedrock documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html) for the complete list of available models.

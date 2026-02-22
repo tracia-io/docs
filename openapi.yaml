@@ -51,7 +51,7 @@ components:
         provider:
           type: string
           nullable: true
-          enum: [OPENAI, ANTHROPIC, GOOGLE]
+          enum: [OPENAI, ANTHROPIC, GOOGLE, AMAZON_BEDROCK]
           description: Model provider
         model:
           type: string
@@ -159,7 +159,7 @@ components:
           description: Model used (e.g., `gpt-4o`)
         provider:
           type: string
-          description: Provider name (e.g., `openai`)
+          description: Provider name (e.g., `openai`, `amazon_bedrock`)
         input:
           type: object
           properties:
@@ -533,10 +533,10 @@ paths:
                         type: string
                       tool_call_id:
                         type: string
-                        description: Required when role is tool — the ID of the tool call being responded to
+                        description: Required when role is tool - the ID of the tool call being responded to
                       tool_name:
                         type: string
-                        description: Required when role is tool — the name of the tool that was called
+                        description: Required when role is tool - the name of the tool that was called
                       tool_calls:
                         type: array
                         description: Tool calls in assistant messages

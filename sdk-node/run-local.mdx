@@ -3,7 +3,7 @@ title: Overview
 description: Execute LLM prompts directly against providers with automatic tracing
 ---
 
-The `runLocal()` method lets you execute prompts directly against OpenAI, Anthropic, or Google while keeping your prompts in your codebase. You get full observability through Tracia without any added latency.
+The `runLocal()` method lets you execute prompts directly against OpenAI, Anthropic, Google, or Amazon Bedrock while keeping your prompts in your codebase. You get full observability through Tracia without any added latency.
 
 ```typescript
 import { Tracia } from 'tracia';
@@ -35,7 +35,7 @@ Some teams prefer managing prompts in their codebase rather than in an external 
 
 When you call `runLocal()`, the SDK:
 
-1. **Calls the provider SDK directly** - Your request goes straight to OpenAI, Anthropic, or Google using their native SDK. Tracia is not in the request path.
+1. **Calls the provider SDK directly** - Your request goes straight to OpenAI, Anthropic, Google, or Amazon Bedrock using their native SDK. Tracia is not in the request path.
 
 2. **Sends the trace asynchronously** - After the LLM responds, trace data is sent to Tracia in the background. This is non-blocking and adds zero latency to your application.
 
@@ -101,6 +101,15 @@ const result = await tracia.runLocal({
 });
 ```
 
+```typescript Amazon Bedrock
+const result = await tracia.runLocal({
+  model: 'amazon.nova-lite-v1:0',
+  messages: [
+    { role: 'user', content: 'What are the benefits of cloud computing?' }
+  ]
+});
+```
+
 ```typescript Streaming
 const stream = tracia.runLocal({
   model: 'gpt-4o',
@@ -136,7 +145,7 @@ console.log('Tokens:', result.usage.totalTokens);
     RunLocalResult fields and usage
   </Card>
   <Card title="Providers" icon="plug" href="/sdk-node/run-local/providers">
-    OpenAI, Anthropic, Google setup
+    OpenAI, Anthropic, Google, Bedrock setup
   </Card>
   <Card title="Models" icon="microchip" href="/sdk-node/run-local/models">
     94+ supported models by provider
@@ -164,6 +173,7 @@ enum LLMProvider {
   OPENAI = 'openai',
   ANTHROPIC = 'anthropic',
   GOOGLE = 'google',
+  AMAZON_BEDROCK = 'amazon_bedrock',
 }
 ```
 
@@ -180,7 +190,7 @@ interface RunLocalInput {
   signal?: AbortSignal; // Cancel the request (streaming only)
 
   // Provider override (for custom/new models)
-  provider?: 'openai' | 'anthropic' | 'google';
+  provider?: 'openai' | 'anthropic' | 'google' | 'amazon_bedrock';
 
   // LLM configuration
   temperature?: number;
@@ -225,7 +235,7 @@ interface RunLocalResult {
     totalTokens: number;
   };
   cost: number | null;
-  provider: 'openai' | 'anthropic' | 'google';
+  provider: 'openai' | 'anthropic' | 'google' | 'amazon_bedrock';
   model: string;
   toolCalls: ToolCall[];
   finishReason: 'stop' | 'max_tokens' | 'tool_calls';

@@ -100,6 +100,7 @@
                   "sdk-python/run-local/parameters",
                   "sdk-python/run-local/response",
                   "sdk-python/run-local/providers",
+                  "sdk-python/run-local/bedrock",
                   "sdk-python/run-local/models",
                   "sdk-python/run-local/variables",
                   "sdk-python/run-local/tracing",
