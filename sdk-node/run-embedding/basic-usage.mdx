@@ -1,0 +1,223 @@
+---
+title: Basic Usage
+description: Getting started with runEmbedding() for text embeddings
+---
+
+## Prerequisites
+
+Install the Tracia SDK and the provider package(s) you need:
+
+<CodeGroup>
+```bash OpenAI
+npm install tracia ai @ai-sdk/openai
+```
+
+```bash Google
+npm install tracia ai @ai-sdk/google
+```
+
+```bash Amazon Bedrock
+npm install tracia ai @ai-sdk/amazon-bedrock
+```
+</CodeGroup>
+
+Set your API keys as environment variables:
+
+```bash .env
+TRACIA_API_KEY=tr_your_tracia_key
+OPENAI_API_KEY=sk-your-openai-key
+GOOGLE_API_KEY=your_google_key
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_REGION=us-east-1
+```
+
+## Single Text Embedding
+
+Pass a string to `input` to embed a single piece of text:
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: 'What is the meaning of life?',
+});
+
+console.log(result.embeddings[0].values.length); // 1536
+console.log(result.embeddings[0].index);          // 0
+console.log(result.usage.totalTokens);            // 8
+```
+
+## Batch Embedding
+
+Pass an array of strings to embed multiple texts in a single request:
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: [
+    'First document about TypeScript',
+    'Second document about Python',
+    'Third document about Rust',
+  ],
+});
+
+console.log(result.embeddings.length); // 3
+
+for (const embedding of result.embeddings) {
+  console.log(`Index ${embedding.index}: ${embedding.values.length} dimensions`);
+}
+```
+
+<Note>
+  Batch embedding is more efficient than making separate requests for each text. The provider processes all inputs in a single API call.
+</Note>
+
+## Specifying Dimensions
+
+Some models support reducing the embedding dimensions. This is useful for saving storage space or improving retrieval speed:
+
+```typescript
+// text-embedding-3-large defaults to 3072 dimensions
+const fullResult = await tracia.runEmbedding({
+  model: 'text-embedding-3-large',
+  input: 'Hello world',
+});
+console.log(fullResult.embeddings[0].values.length); // 3072
+
+// Reduce to 256 dimensions
+const reducedResult = await tracia.runEmbedding({
+  model: 'text-embedding-3-large',
+  input: 'Hello world',
+  dimensions: 256,
+});
+console.log(reducedResult.embeddings[0].values.length); // 256
+```
+
+<Warning>
+  Not all models support the `dimensions` parameter. Currently, OpenAI's `text-embedding-3-small` and `text-embedding-3-large`, and Google's `text-embedding-004` support it.
+</Warning>
+
+## Using with Sessions
+
+Sessions automatically chain embedding spans with other spans under the same trace:
+
+```typescript
+const session = tracia.createSession();
+
+// First: generate an embedding
+const embeddingResult = await session.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: 'What is quantum computing?',
+});
+
+// Second: use the embedding context in a completion
+const completionResult = await session.runLocal({
+  model: 'gpt-4o',
+  messages: [
+    { role: 'user', content: 'Explain the concept I just embedded.' },
+  ],
+});
+
+// Both spans are linked under the same trace in the dashboard
+console.log(session.getTraceId());
+```
+
+The session manages `traceId` and `parentSpanId` automatically, so all spans appear in sequence in the Tracia dashboard.
+
+## With Tracing Metadata
+
+Add tags and user identifiers for filtering in the Tracia dashboard:
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: 'Document to embed for search',
+  tags: ['production', 'search-index'],
+  userId: 'user_abc123',
+});
+
+console.log(`Span ID: ${result.spanId}`);
+```
+
+## Without Tracing
+
+Disable tracing when you don't need observability:
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: 'Just need the embedding, no trace',
+  sendTrace: false,
+});
+```
+
+## Google Embeddings
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-004',
+  input: 'Embed with Google',
+});
+
+console.log(result.provider); // 'google'
+console.log(result.embeddings[0].values.length); // 768
+```
+
+## Amazon Bedrock Embeddings
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'amazon.titan-embed-text-v2:0',
+  input: 'Embed with Bedrock',
+});
+
+console.log(result.provider); // 'amazon_bedrock'
+```
+
+## RunEmbeddingInput Reference
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `input` | `string \| string[]` | Yes | Text or array of texts to embed |
+| `model` | `string` | Yes | Embedding model name |
+| `provider` | `LLMProvider` | No | Provider override (auto-detected from model) |
+| `providerApiKey` | `string` | No | Provider API key override |
+| `dimensions` | `number` | No | Dimension override (model-dependent) |
+| `timeoutMs` | `number` | No | Request timeout in milliseconds |
+| `sendTrace` | `boolean` | No | Send trace to Tracia (default: `true`) |
+| `spanId` | `string` | No | Custom span ID (`sp_` + 16 hex chars) |
+| `tags` | `string[]` | No | Tags for the span |
+| `userId` | `string` | No | User ID for the span |
+| `sessionId` | `string` | No | Session ID for the span |
+| `traceId` | `string` | No | Group related spans together |
+| `parentSpanId` | `string` | No | Link to a parent span |
+
+## RunEmbeddingResult Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `embeddings` | `EmbeddingVector[]` | Array of embedding vectors |
+| `spanId` | `string` | Unique span ID for this request |
+| `traceId` | `string` | Trace ID for grouping related spans |
+| `latencyMs` | `number` | Request latency in milliseconds |
+| `usage` | `EmbeddingUsage` | Token usage (`totalTokens`) |
+| `cost` | `number \| null` | Always `null` (cost is calculated server-side) |
+| `provider` | `LLMProvider` | The provider used |
+| `model` | `string` | The model used |
+
+### EmbeddingVector
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `values` | `number[]` | The embedding float values |
+| `index` | `number` | Index of this embedding in the input array |
+
+### EmbeddingUsage
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `totalTokens` | `number` | Total tokens consumed by the request |

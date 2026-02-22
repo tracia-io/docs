@@ -1,0 +1,84 @@
+---
+title: Supported Models
+description: Embedding models supported by provider
+---
+
+The SDK automatically detects the provider based on the model name. Below is the complete list of supported embedding models.
+
+<Note>
+  Anthropic does not offer native embedding models. Use OpenAI, Google, or Amazon Bedrock for embeddings.
+</Note>
+
+## OpenAI
+
+| Model | Dimensions | Description |
+|-------|-----------|-------------|
+| `text-embedding-3-small` | 1536 | Recommended for most use cases. Best balance of cost and performance. |
+| `text-embedding-3-large` | 3072 | Higher quality embeddings with more dimensions. Supports `dimensions` parameter for reduced output. |
+| `text-embedding-ada-002` | 1536 | Legacy model. Use `text-embedding-3-small` for new projects. |
+
+### Dimension Override
+
+OpenAI's `text-embedding-3-small` and `text-embedding-3-large`, and Google's `text-embedding-004` support the `dimensions` parameter to reduce the output size:
+
+```typescript
+// Reduce text-embedding-3-large from 3072 to 256 dimensions
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-large',
+  input: 'Hello world',
+  dimensions: 256,
+});
+
+console.log(result.embeddings[0].values.length); // 256
+```
+
+## Google
+
+| Model | Dimensions | Description |
+|-------|-----------|-------------|
+| `text-embedding-004` | 768 | Google's latest text embedding model. |
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-004',
+  input: 'Hello world',
+});
+
+console.log(result.embeddings[0].values.length); // 768
+```
+
+## Amazon Bedrock
+
+| Model | Dimensions | Description |
+|-------|-----------|-------------|
+| `amazon.titan-embed-text-v2:0` | 1024 | Amazon Titan Text Embeddings v2. |
+| `cohere.embed-english-v3` | 1024 | Cohere Embed English v3 via Bedrock. |
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'amazon.titan-embed-text-v2:0',
+  input: 'Hello world',
+});
+
+console.log(result.provider); // 'amazon_bedrock'
+```
+
+<Note>
+  Amazon Bedrock models require AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`) to be set in your environment.
+</Note>
+
+## Using Custom Models
+
+For embedding models not in the built-in list (fine-tuned or new releases), specify the provider explicitly:
+
+```typescript
+const result = await tracia.runEmbedding({
+  model: 'custom-embedding-model',
+  provider: 'openai',
+  input: 'Hello world',
+});
+```
+
+<Warning>
+  When using custom models, always specify the `provider` parameter to ensure the correct SDK is used.
+</Warning>

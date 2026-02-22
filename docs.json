@@ -55,6 +55,14 @@
                 ]
               },
               {
+                "group": "Run Embedding",
+                "pages": [
+                  "sdk-node/run-embedding",
+                  "sdk-node/run-embedding/basic-usage",
+                  "sdk-node/run-embedding/models"
+                ]
+              },
+              {
                 "group": "Spans",
                 "pages": [
                   "sdk-node/spans",
@@ -96,6 +104,14 @@
                   "sdk-python/run-local/variables",
                   "sdk-python/run-local/tracing",
                   "sdk-python/run-local/advanced"
+                ]
+              },
+              {
+                "group": "Run Embedding",
+                "pages": [
+                  "sdk-python/run-embedding",
+                  "sdk-python/run-embedding/basic-usage",
+                  "sdk-python/run-embedding/models"
                 ]
               },
               {

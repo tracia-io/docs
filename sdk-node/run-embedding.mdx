@@ -1,0 +1,131 @@
+---
+title: Overview
+description: Generate text embeddings with automatic tracing
+---
+
+The `runEmbedding()` method generates text embeddings using OpenAI, Google, or Amazon Bedrock embedding models. Like `runLocal()`, embedding requests go directly to the provider and traces are sent to Tracia asynchronously in the background.
+
+```typescript
+import { Tracia } from 'tracia';
+
+const tracia = new Tracia({ apiKey: process.env.TRACIA_API_KEY });
+
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: 'What is the meaning of life?',
+});
+
+console.log(result.embeddings[0].values.length); // 1536
+```
+
+## How It Works
+
+When you call `runEmbedding()`, the SDK:
+
+1. **Calls the provider directly** - Your embedding request goes straight to OpenAI, Google, or Amazon Bedrock. Tracia is not in the request path.
+
+2. **Sends the trace asynchronously** - After the provider responds, trace data is sent to Tracia in the background. This is non-blocking and adds zero latency to your application.
+
+Embedding spans appear in the Tracia dashboard with the `EMBEDDING` span kind, so you can track embedding usage, latency, and costs alongside your LLM completions.
+
+## Quick Examples
+
+<CodeGroup>
+```typescript Single Text
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: 'Hello world',
+});
+
+console.log(result.embeddings[0].values.length); // 1536
+```
+
+```typescript Batch
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-small',
+  input: ['Hello', 'World', 'Goodbye'],
+});
+
+console.log(result.embeddings.length); // 3
+```
+
+```typescript With Dimensions
+const result = await tracia.runEmbedding({
+  model: 'text-embedding-3-large',
+  input: 'Reduce dimensionality',
+  dimensions: 256,
+});
+
+console.log(result.embeddings[0].values.length); // 256
+```
+</CodeGroup>
+
+## Available Pages
+
+<CardGroup cols={2}>
+  <Card title="Basic Usage" icon="play" href="/sdk-node/run-embedding/basic-usage">
+    Single and batch embeddings, dimensions, sessions
+  </Card>
+  <Card title="Supported Models" icon="microchip" href="/sdk-node/run-embedding/models">
+    OpenAI, Google, and Amazon Bedrock embedding models
+  </Card>
+</CardGroup>
+
+## Types
+
+### RunEmbeddingInput
+
+```typescript
+interface RunEmbeddingInput {
+  // Required
+  input: string | string[];  // Text(s) to embed
+  model: string;             // Embedding model name
+
+  // Optional
+  provider?: LLMProvider;    // Provider override (auto-detected from model)
+  providerApiKey?: string;   // Provider API key override
+  dimensions?: number;       // Dimension override (model-dependent)
+  timeoutMs?: number;        // Request timeout in milliseconds
+
+  // Span options
+  sendTrace?: boolean;       // Send trace to Tracia (default: true)
+  spanId?: string;           // Custom span ID
+  tags?: string[];           // Tags for the span
+  userId?: string;           // User ID for the span
+  sessionId?: string;        // Session ID for the span
+  traceId?: string;          // Group related spans together
+  parentSpanId?: string;     // Link to parent span
+}
+```
+
+### RunEmbeddingResult
+
+```typescript
+interface RunEmbeddingResult {
+  embeddings: EmbeddingVector[];  // The generated embeddings
+  spanId: string;                 // Unique span ID
+  traceId: string;                // Trace ID for grouping
+  latencyMs: number;              // Request latency in milliseconds
+  usage: EmbeddingUsage;          // Token usage
+  cost: number | null;            // Always null (cost calculated server-side)
+  provider: LLMProvider;          // The provider used
+  model: string;                  // The model used
+}
+```
+
+### EmbeddingVector
+
+```typescript
+interface EmbeddingVector {
+  values: number[];  // The embedding float values
+  index: number;     // Index in the input array
+}
+```
+
+### EmbeddingUsage
+
+```typescript
+interface EmbeddingUsage {
+  totalTokens: number;  // Total tokens consumed
+}
+```

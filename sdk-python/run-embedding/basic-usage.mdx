@@ -1,0 +1,240 @@
+---
+title: Basic Usage
+description: Getting started with run_embedding() for text embeddings
+---
+
+## Prerequisites
+
+Install the Tracia SDK:
+
+```bash
+pip install tracia
+```
+
+Set your API keys as environment variables:
+
+```bash .env
+TRACIA_API_KEY=tr_your_tracia_key
+OPENAI_API_KEY=sk-your-openai-key
+GOOGLE_API_KEY=your_google_key
+AWS_ACCESS_KEY_ID=your_aws_access_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+AWS_REGION=us-east-1
+```
+
+<Note>
+  The Python SDK uses LiteLLM under the hood. LiteLLM is included as a dependency and handles all provider communication.
+</Note>
+
+## Single Text Embedding
+
+Pass a string to `input` to embed a single piece of text:
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+result = client.run_embedding(
+    model="text-embedding-3-small",
+    input="What is the meaning of life?",
+)
+
+print(len(result.embeddings[0].values))  # 1536
+print(result.embeddings[0].index)         # 0
+print(result.usage.total_tokens)          # 8
+```
+
+## Batch Embedding
+
+Pass a list of strings to embed multiple texts in a single request:
+
+```python
+result = client.run_embedding(
+    model="text-embedding-3-small",
+    input=[
+        "First document about TypeScript",
+        "Second document about Python",
+        "Third document about Rust",
+    ],
+)
+
+print(len(result.embeddings))  # 3
+
+for embedding in result.embeddings:
+    print(f"Index {embedding.index}: {len(embedding.values)} dimensions")
+```
+
+<Note>
+  Batch embedding is more efficient than making separate requests for each text. The provider processes all inputs in a single API call.
+</Note>
+
+## Specifying Dimensions
+
+Some models support reducing the embedding dimensions. This is useful for saving storage space or improving retrieval speed:
+
+```python
+# text-embedding-3-large defaults to 3072 dimensions
+full_result = client.run_embedding(
+    model="text-embedding-3-large",
+    input="Hello world",
+)
+print(len(full_result.embeddings[0].values))  # 3072
+
+# Reduce to 256 dimensions
+reduced_result = client.run_embedding(
+    model="text-embedding-3-large",
+    input="Hello world",
+    dimensions=256,
+)
+print(len(reduced_result.embeddings[0].values))  # 256
+```
+
+<Warning>
+  Not all models support the `dimensions` parameter. Currently, OpenAI's `text-embedding-3-small` and `text-embedding-3-large`, and Google's `text-embedding-004` support it.
+</Warning>
+
+## Using with Sessions
+
+Sessions automatically chain embedding spans with other spans under the same trace:
+
+```python
+session = client.create_session()
+
+# First: generate an embedding
+embedding_result = session.run_embedding(
+    model="text-embedding-3-small",
+    input="What is quantum computing?",
+)
+
+# Second: use the embedding context in a completion
+completion_result = session.run_local(
+    model="gpt-4o",
+    messages=[
+        {"role": "user", "content": "Explain the concept I just embedded."},
+    ],
+)
+
+# Both spans are linked under the same trace in the dashboard
+print(session.trace_id)
+```
+
+The session manages `trace_id` and `parent_span_id` automatically, so all spans appear in sequence in the Tracia dashboard.
+
+## With Tracing Metadata
+
+Add tags and user identifiers for filtering in the Tracia dashboard:
+
+```python
+result = client.run_embedding(
+    model="text-embedding-3-small",
+    input="Document to embed for search",
+    tags=["production", "search-index"],
+    user_id="user_abc123",
+)
+
+print(f"Span ID: {result.span_id}")
+```
+
+## Without Tracing
+
+Disable tracing when you don't need observability:
+
+```python
+result = client.run_embedding(
+    model="text-embedding-3-small",
+    input="Just need the embedding, no trace",
+    send_trace=False,
+)
+```
+
+## Async Usage
+
+Use `arun_embedding()` for async contexts:
+
+```python
+result = await client.arun_embedding(
+    model="text-embedding-3-small",
+    input="Embed this text asynchronously",
+)
+
+print(len(result.embeddings[0].values))  # 1536
+```
+
+Batch embedding works the same way in async:
+
+```python
+result = await client.arun_embedding(
+    model="text-embedding-3-small",
+    input=["First text", "Second text", "Third text"],
+)
+
+print(len(result.embeddings))  # 3
+```
+
+## Google Embeddings
+
+```python
+result = client.run_embedding(
+    model="text-embedding-004",
+    input="Embed with Google",
+)
+
+print(result.provider)                         # LLMProvider.GOOGLE
+print(len(result.embeddings[0].values))        # 768
+```
+
+## Amazon Bedrock Embeddings
+
+```python
+result = client.run_embedding(
+    model="amazon.titan-embed-text-v2:0",
+    input="Embed with Bedrock",
+)
+
+print(result.provider)  # LLMProvider.AMAZON_BEDROCK
+```
+
+## RunEmbeddingInput Reference
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `input` | `str \| list[str]` | Yes | Text or list of texts to embed |
+| `model` | `str` | Yes | Embedding model name |
+| `provider` | `LLMProvider` | No | Provider override (auto-detected from model) |
+| `provider_api_key` | `str` | No | Provider API key override |
+| `dimensions` | `int` | No | Dimension override (model-dependent) |
+| `timeout_ms` | `int` | No | Request timeout in milliseconds |
+| `send_trace` | `bool` | No | Send trace to Tracia (default: `True`) |
+| `span_id` | `str` | No | Custom span ID (`sp_` + 16 hex chars) |
+| `tags` | `list[str]` | No | Tags for the span |
+| `user_id` | `str` | No | User ID for the span |
+| `session_id` | `str` | No | Session ID for the span |
+| `trace_id` | `str` | No | Group related spans together |
+| `parent_span_id` | `str` | No | Link to a parent span |
+
+## RunEmbeddingResult Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `embeddings` | `list[EmbeddingVector]` | List of embedding vectors |
+| `span_id` | `str` | Unique span ID for this request |
+| `trace_id` | `str` | Trace ID for grouping related spans |
+| `latency_ms` | `int` | Request latency in milliseconds |
+| `usage` | `EmbeddingUsage` | Token usage (`total_tokens`) |
+| `cost` | `float \| None` | Always `None` (cost is calculated server-side) |
+| `provider` | `LLMProvider` | The provider used |
+| `model` | `str` | The model used |
+
+### EmbeddingVector
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `values` | `list[float]` | The embedding float values |
+| `index` | `int` | Index of this embedding in the input list |
+
+### EmbeddingUsage
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_tokens` | `int` | Total tokens consumed by the request |

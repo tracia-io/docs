@@ -1,0 +1,140 @@
+---
+title: Overview
+description: Generate text embeddings with automatic tracing
+---
+
+The `run_embedding()` method generates text embeddings using OpenAI, Google, or Amazon Bedrock embedding models. Like `run_local()`, embedding requests go directly to the provider via LiteLLM and traces are sent to Tracia asynchronously in the background.
+
+```python
+from tracia import Tracia
+
+client = Tracia(api_key="tr_your_api_key")
+
+result = client.run_embedding(
+    model="text-embedding-3-small",
+    input="What is the meaning of life?",
+)
+
+print(len(result.embeddings[0].values))  # 1536
+```
+
+## How It Works
+
+When you call `run_embedding()`, the SDK:
+
+1. **Calls the provider via LiteLLM** - Your embedding request goes to OpenAI, Google, or Amazon Bedrock through LiteLLM. Tracia is not in the request path.
+
+2. **Sends the trace asynchronously** - After the provider responds, trace data is sent to Tracia in the background. This is non-blocking and adds zero latency to your application.
+
+Embedding spans appear in the Tracia dashboard with the `EMBEDDING` span kind, so you can track embedding usage, latency, and costs alongside your LLM completions.
+
+## Quick Examples
+
+<CodeGroup>
+```python Single Text
+result = client.run_embedding(
+    model="text-embedding-3-small",
+    input="Hello world",
+)
+
+print(len(result.embeddings[0].values))  # 1536
+```
+
+```python Batch
+result = client.run_embedding(
+    model="text-embedding-3-small",
+    input=["Hello", "World", "Goodbye"],
+)
+
+print(len(result.embeddings))  # 3
+```
+
+```python With Dimensions
+result = client.run_embedding(
+    model="text-embedding-3-large",
+    input="Reduce dimensionality",
+    dimensions=256,
+)
+
+print(len(result.embeddings[0].values))  # 256
+```
+</CodeGroup>
+
+## Async Variant
+
+Use `arun_embedding()` for async code:
+
+```python
+result = await client.arun_embedding(
+    model="text-embedding-3-small",
+    input="Hello world",
+)
+
+print(len(result.embeddings[0].values))  # 1536
+```
+
+## Available Pages
+
+<CardGroup cols={2}>
+  <Card title="Basic Usage" icon="play" href="/sdk-python/run-embedding/basic-usage">
+    Single and batch embeddings, dimensions, sessions
+  </Card>
+  <Card title="Supported Models" icon="microchip" href="/sdk-python/run-embedding/models">
+    OpenAI, Google, and Amazon Bedrock embedding models
+  </Card>
+</CardGroup>
+
+## Types
+
+### RunEmbeddingInput
+
+```python
+class RunEmbeddingInput(BaseModel):
+    # Required
+    input: str | list[str]       # Text(s) to embed
+    model: str                   # Embedding model name
+
+    # Optional
+    provider: LLMProvider | None = None          # Provider override
+    provider_api_key: str | None = None          # alias: "providerApiKey"
+    dimensions: int | None = None                # Dimension override
+    timeout_ms: int | None = None                # alias: "timeoutMs"
+
+    # Span options
+    send_trace: bool | None = None               # alias: "sendTrace"
+    span_id: str | None = None                   # alias: "spanId"
+    tags: list[str] | None = None
+    user_id: str | None = None                   # alias: "userId"
+    session_id: str | None = None                # alias: "sessionId"
+    trace_id: str | None = None                  # alias: "traceId"
+    parent_span_id: str | None = None            # alias: "parentSpanId"
+```
+
+### RunEmbeddingResult
+
+```python
+class RunEmbeddingResult(BaseModel):
+    embeddings: list[EmbeddingVector]   # The generated embeddings
+    span_id: str                        # alias: "spanId"
+    trace_id: str                       # alias: "traceId"
+    latency_ms: int                     # alias: "latencyMs"
+    usage: EmbeddingUsage               # Token usage
+    cost: float | None                  # Always None (cost calculated server-side)
+    provider: LLMProvider               # The provider used
+    model: str                          # The model used
+```
+
+### EmbeddingVector
+
+```python
+class EmbeddingVector(BaseModel):
+    values: list[float]   # The embedding float values
+    index: int            # Index in the input array
+```
+
+### EmbeddingUsage
+
+```python
+class EmbeddingUsage(BaseModel):
+    total_tokens: int   # alias: "totalTokens"
+```
