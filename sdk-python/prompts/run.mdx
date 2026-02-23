@@ -24,6 +24,7 @@ Execute a prompt with variable substitution and get the generated response. Trac
 | `options.session_id` | `str` | No | Session identifier |
 | `options.trace_id` | `str` | No | Group related spans together (session) |
 | `options.parent_span_id` | `str` | No | Link to parent span |
+| `options.version` | `int` | No | Run a specific prompt version (uses latest if omitted) |
 | `options.messages` | `list[LocalPromptMessage]` | No | Full conversation messages for multi-turn (skips template rendering) |
 
 ## Response
@@ -72,6 +73,22 @@ result = client.prompts.run(
         session_id="session_abc",
     ),
 )
+```
+
+### Pinning a Version
+
+Run a specific prompt version instead of the latest. Useful for production deployments where you want to lock a known-good version while continuing to iterate on the prompt.
+
+```python
+from tracia import RunOptions
+
+result = client.prompts.run(
+    "welcome-email",
+    {"name": "Alice", "product": "Tracia"},
+    RunOptions(version=3),
+)
+
+print(result.prompt_version)  # 3
 ```
 
 ### Accessing Metadata

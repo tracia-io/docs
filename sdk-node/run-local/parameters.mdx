@@ -24,8 +24,8 @@ interface LocalPromptMessage {
   toolName?: string;    // Required for 'tool' role
 }
 
-// Content parts for assistant messages with tool calls
-type ContentPart = TextPart | ToolCallPart;
+// Content parts for messages
+type ContentPart = TextPart | ToolCallPart | ImagePart;
 
 interface TextPart {
   type: 'text';
@@ -37,6 +37,12 @@ interface ToolCallPart {
   id: string;
   name: string;
   arguments: Record<string, unknown>;
+}
+
+interface ImagePart {
+  type: 'image';
+  image: string | Buffer | ArrayBuffer | Uint8Array;
+  mimeType?: string;  // e.g., 'image/png', 'image/jpeg'
 }
 ```
 

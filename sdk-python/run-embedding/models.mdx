@@ -67,6 +67,30 @@ print(result.provider)  # LLMProvider.AMAZON_BEDROCK
   Amazon Bedrock models require AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`) to be set in your environment.
 </Note>
 
+## Voyage AI
+
+| Model | Dimensions | Description |
+|-------|-----------|-------------|
+| `voyage-3` | 1024 | General-purpose embedding model. |
+| `voyage-3-large` | 1024 | Higher quality, larger model. |
+| `voyage-3-lite` | 512 | Lightweight, lower cost. |
+| `voyage-code-3` | 1024 | Optimized for code retrieval and understanding. |
+| `voyage-finance-2` | 1024 | Fine-tuned for financial documents. |
+| `voyage-law-2` | 1024 | Fine-tuned for legal documents. |
+
+```python
+result = client.run_embedding(
+    model="voyage-3",
+    input="Hello world",
+)
+
+print(result.provider)  # LLMProvider.VOYAGE
+```
+
+<Note>
+  Voyage AI requires a `VOYAGE_API_KEY` environment variable. Voyage is an embedding-only provider and cannot be used with `run_local()`.
+</Note>
+
 ## Using Custom Models
 
 For embedding models not in the built-in list (fine-tuned or new releases), specify the provider explicitly:
